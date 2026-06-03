@@ -5,7 +5,12 @@ import { useState } from 'react'
 import { JobCard } from './job-card'
 import { JobDetailSheet } from './job-detail-sheet'
 import type { JobDetailData } from './job-detail'
-import { NO_FLAGS, type UserJobFlags } from '@/lib/user-jobs'
+import type { UserJobFlags } from '@/lib/user-jobs'
+
+// Inlined to keep this client module free of any server-only imports
+// (the `user-jobs` module pulls in `next/headers` via the supabase server
+// client).
+const NO_FLAGS: UserJobFlags = { saved: false, applied: false, hidden: false }
 
 export type FeedJob = JobDetailData & {
   source: string
