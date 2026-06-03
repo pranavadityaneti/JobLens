@@ -46,7 +46,8 @@ export default async function JobsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+            // userState wiring lands in Session 5 Batch 3 (per-job state lookup).
+            <JobCard key={job.id} job={job} userState={null} />
           ))}
         </div>
       )}
