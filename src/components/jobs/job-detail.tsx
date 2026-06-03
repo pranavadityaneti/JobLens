@@ -1,8 +1,17 @@
 // src/components/jobs/job-detail.tsx
 import { Building2, Briefcase, Clock, MapPin, Wallet, Sparkles } from 'lucide-react'
+import DOMPurify from 'isomorphic-dompurify'
 import type { UserJobState } from '@/lib/user-jobs'
 import { CompanyLogo } from './company-logo'
 import { JobCardActions } from './job-card-actions'
+
+/**
+ * Heuristic for "does this description contain HTML markup?". ATS sources
+ * (Greenhouse, Lever, Ashby) return HTML; Adzuna returns plain text.
+ */
+function looksLikeHtml(s: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(s)
+}
 
 export type JobDetailData = {
   id: string
@@ -225,9 +234,28 @@ export function JobDetail({
           <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
             About the role
           </h3>
-          <div className="mt-3 max-w-none whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
-            {highlightLabels(job.description)}
-          </div>
+          {looksLikeHtml(job.description) ? (
+            <div
+              className="prose prose-sm prose-zinc mt-3 max-w-none text-zinc-700 [&_a]:text-emerald-700 [&_li]:my-0.5"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(job.description, {
+                  ALLOWED_TAGS: [
+                    'p', 'br', 'ul', 'ol', 'li',
+                    'strong', 'em', 'b', 'i', 'u',
+                    'a',
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                    'blockquote', 'code', 'pre',
+                    'div', 'span',
+                  ],
+                  ALLOWED_ATTR: ['href', 'target', 'rel'],
+                }),
+              }}
+            />
+          ) : (
+            <div className="mt-3 max-w-none whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
+              {highlightLabels(job.description)}
+            </div>
+          )}
         </section>
 
         <hr className="my-6 border-zinc-200" />
