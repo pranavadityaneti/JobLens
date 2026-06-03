@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JobLens
 
-## Getting Started
+Unified Indian job aggregation + AI resume coaching. A web app that pulls jobs from many sources into one feed, remembers what you've applied to so you don't re-see jobs, and provides free job-specific AI resume feedback.
 
-First, run the development server:
+**Status:** Pre-MVP. Session 2 (setup) in progress. See [`docs/specs/`](docs/specs/) for the design and [`docs/plans/`](docs/plans/) for the session-by-session roadmap.
+
+## Links
+
+- **Design spec:** [`docs/specs/2026-06-03-mvp-design.md`](docs/specs/2026-06-03-mvp-design.md)
+- **Deferred work queue:** [`forlater.md`](forlater.md)
+- **Current session plan:** [`docs/plans/2026-06-03-session-2-setup.md`](docs/plans/2026-06-03-session-2-setup.md)
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · Supabase (Postgres + Auth + Storage + pgvector) · Vercel · Anthropic Claude Sonnet · Voyage AI embeddings · Wati WhatsApp OTP
+
+## Local development
 
 ```bash
+npm install
+cp .env.local.example .env.local   # fill in real secrets — see Wati/Supabase/etc. accounts
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project conventions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Specs live in `docs/specs/YYYY-MM-DD-<topic>-design.md`
+- Session plans live in `docs/plans/YYYY-MM-DD-session-<n>-<topic>.md`
+- Work consciously deferred goes in `forlater.md` (read at the start of every session)
+- `.env.local` holds real secrets and is git-ignored; `.env.local.example` is the committed template
