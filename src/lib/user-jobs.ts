@@ -1,13 +1,20 @@
 // src/lib/user-jobs.ts
-// Per-user job-state repository.
-// Used by server actions; reads/writes go through the cookie-aware server
-// client so RLS enforces ownership.
+// Per-user job-flag repository. Three independent boolean flags
+// (saved/applied/hidden) — a job can be in multiple states simultaneously.
 
 import { getSupabaseServer } from '@/lib/supabase/server'
 
-export type UserJobState = 'saved' | 'applied' | 'hidden'
+export type UserJobFlag = 'saved' | 'applied' | 'hidden'
 
-export type JobWithState = {
+export type UserJobFlags = {
+  saved: boolean
+  applied: boolean
+  hidden: boolean
+}
+
+export const NO_FLAGS: UserJobFlags = { saved: false, applied: false, hidden: false }
+
+export type JobWithFlags = {
   id: string
   source: string
   source_id: string
@@ -23,63 +30,65 @@ export type JobWithState = {
   contract_type: string | null
   contract_time: string | null
   posted_at: string
-  state: UserJobState
-  state_updated_at: string
+  saved_at: string | null
+  applied_at: string | null
+  hidden_at: string | null
+}
+
+const COLUMN_FOR_FLAG: Record<UserJobFlag, 'saved_at' | 'applied_at' | 'hidden_at'> = {
+  saved: 'saved_at',
+  applied: 'applied_at',
+  hidden: 'hidden_at',
 }
 
 /**
- * Upsert (or clear) the state for one (user, job) pair.
- * Pass `state = null` to remove any existing relationship.
- * Returns the new state, or null if cleared.
+ * Set or clear a single flag for the current user on a job. Other flags on
+ * the same row are preserved. Inserts a row if none exists.
  */
-export async function setJobState(
+export async function setUserJobFlag(
   jobId: string,
-  state: UserJobState | null,
-): Promise<{ ok: true; state: UserJobState | null } | { ok: false; error: string }> {
+  flag: UserJobFlag,
+  value: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await getSupabaseServer()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated.' }
 
-  if (state === null) {
-    const { error } = await supabase
-      .from('user_jobs')
-      .delete()
-      .match({ user_id: user.id, job_id: jobId })
-    if (error) return { ok: false, error: error.message }
-    return { ok: true, state: null }
-  }
+  const column = COLUMN_FOR_FLAG[flag]
+  const now = new Date().toISOString()
 
   const { error } = await supabase.from('user_jobs').upsert(
     {
       user_id: user.id,
       job_id: jobId,
-      state,
+      [column]: value ? now : null,
     },
     { onConflict: 'user_id,job_id' },
   )
   if (error) return { ok: false, error: error.message }
-  return { ok: true, state }
+  return { ok: true }
 }
 
 /**
- * Get the current user's jobs filtered by a single state, newest first.
- * Joins `jobs` so the caller can render full job cards.
+ * Get jobs the current user has a given flag set on, newest first.
+ * Joins `jobs` so callers can render full cards.
  */
-export async function getJobsByUserState(state: UserJobState): Promise<JobWithState[]> {
+export async function getJobsByUserFlag(flag: UserJobFlag): Promise<JobWithFlags[]> {
   const supabase = await getSupabaseServer()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data, error } = await supabase
+  const column = COLUMN_FOR_FLAG[flag]
+
+  const { data } = await supabase
     .from('user_jobs')
     .select(
       `
-      state,
-      updated_at,
+      saved_at, applied_at, hidden_at,
       jobs (
         id, source, source_id, title, company, location, description, apply_url,
         salary_min, salary_max, salary_currency, category, contract_type,
@@ -88,55 +97,56 @@ export async function getJobsByUserState(state: UserJobState): Promise<JobWithSt
     `,
     )
     .eq('user_id', user.id)
-    .eq('state', state)
-    .order('updated_at', { ascending: false })
+    .not(column, 'is', null)
+    .order(column, { ascending: false })
 
-  if (error || !data) return []
+  if (!data) return []
 
   return data
     .filter((row) => row.jobs != null)
-    // The Supabase JS type for an embedded join is sometimes inferred as
-    // a single object, sometimes as an array; coerce defensively.
     .map((row) => {
       const job = Array.isArray(row.jobs) ? row.jobs[0] : row.jobs
       return {
-        ...(job as Omit<JobWithState, 'state' | 'state_updated_at'>),
-        state: row.state as UserJobState,
-        state_updated_at: row.updated_at as string,
+        ...(job as Omit<JobWithFlags, 'saved_at' | 'applied_at' | 'hidden_at'>),
+        saved_at: row.saved_at as string | null,
+        applied_at: row.applied_at as string | null,
+        hidden_at: row.hidden_at as string | null,
       }
     })
 }
 
 /**
- * For the current user, return a Set of job_ids whose state is in the given
- * filter. Used by feed pages to "exclude applied + hidden" cheaply.
+ * Returns the set of job_ids for the current user where ANY of the given
+ * flags is set. Used by the main feed to exclude applied + hidden jobs.
  */
-export async function getUserJobIdsByStates(
-  states: UserJobState[],
+export async function getUserJobIdsWithAnyFlag(
+  flags: UserJobFlag[],
 ): Promise<Set<string>> {
-  if (states.length === 0) return new Set()
+  if (flags.length === 0) return new Set()
   const supabase = await getSupabaseServer()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return new Set()
 
+  const orFilter = flags.map((f) => `${COLUMN_FOR_FLAG[f]}.not.is.null`).join(',')
+
   const { data } = await supabase
     .from('user_jobs')
     .select('job_id')
     .eq('user_id', user.id)
-    .in('state', states)
+    .or(orFilter)
 
   return new Set((data ?? []).map((r) => r.job_id as string))
 }
 
 /**
- * Map of all user_job state for a list of jobIds. Used by the main feed to
- * render the correct icon (saved/hidden/applied) on each card.
+ * Map of flags for a list of jobIds for the current user. Used by feed
+ * pages to render correct icons.
  */
-export async function getUserStatesForJobs(
+export async function getUserFlagsForJobs(
   jobIds: string[],
-): Promise<Map<string, UserJobState>> {
+): Promise<Map<string, UserJobFlags>> {
   if (jobIds.length === 0) return new Map()
   const supabase = await getSupabaseServer()
   const {
@@ -146,11 +156,17 @@ export async function getUserStatesForJobs(
 
   const { data } = await supabase
     .from('user_jobs')
-    .select('job_id, state')
+    .select('job_id, saved_at, applied_at, hidden_at')
     .eq('user_id', user.id)
     .in('job_id', jobIds)
 
-  return new Map(
-    (data ?? []).map((r) => [r.job_id as string, r.state as UserJobState]),
-  )
+  const m = new Map<string, UserJobFlags>()
+  for (const row of data ?? []) {
+    m.set(row.job_id as string, {
+      saved: row.saved_at != null,
+      applied: row.applied_at != null,
+      hidden: row.hidden_at != null,
+    })
+  }
+  return m
 }
