@@ -1,25 +1,12 @@
-// src/lib/adzuna.ts
+// src/lib/sources/adzuna.ts
 // Adzuna India API client. MVP: one-page fetch with results_per_page up to 50.
 //
 // Endpoint shape:
 //   GET https://api.adzuna.com/v1/api/jobs/in/search/{page}?app_id=…&app_key=…&results_per_page=50&content-type=application/json
 
-export type ParsedJob = {
-  source: 'adzuna'
-  source_id: string
-  title: string
-  company: string
-  location: string
-  description: string
-  apply_url: string
-  salary_min: number | null
-  salary_max: number | null
-  salary_currency: string | null
-  category: string | null
-  contract_type: string | null
-  contract_time: string | null
-  posted_at: string // ISO timestamp
-}
+import type { ParsedJob } from './types'
+
+export type { ParsedJob } from './types'
 
 type AdzunaRawJob = {
   id: string

@@ -1,7 +1,7 @@
 // src/lib/jobs.ts
 // Job repository — DB writes through the admin client (bypasses RLS).
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import type { ParsedJob } from './adzuna'
+import type { ParsedJob } from './sources/types'
 
 export async function upsertJobs(jobs: ParsedJob[]): Promise<{
   inserted: number
