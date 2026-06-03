@@ -10,6 +10,10 @@ import {
   type DashboardJob,
 } from '@/components/jobs/jobs-dashboard'
 import {
+  CONTRACT_TYPE_GROUPS,
+  INDUSTRY_GROUPS,
+  INDUSTRY_OPTIONS,
+  LOCATION_GROUPS,
   dateCutoffIso,
   parseFilters,
   type SortKey,
@@ -18,10 +22,6 @@ import {
   extractExperienceBucket,
   extractWorkModel,
 } from '@/lib/job-text'
-
-// How many recent jobs to inspect when building the dynamic industry list.
-const INDUSTRY_SAMPLE_SIZE = 500
-const INDUSTRY_MAX_OPTIONS = 20
 
 export default async function JobsPage({
   searchParams,
@@ -58,22 +58,39 @@ export default async function JobsPage({
     )
   }
   if (filters.locations.length) {
-    const orStr = filters.locations
-      .map((l) => `location.ilike.%${l}%`)
-      .join(',')
+    // Each selected label expands to its alias patterns; OR-match the union.
+    const patterns = filters.locations.flatMap((l) => LOCATION_GROUPS[l] ?? [l])
+    const orStr = patterns.map((p) => `location.ilike.%${p}%`).join(',')
     query = query.or(orStr)
   }
   if (filters.industries.length) {
-    query = query.in('category', filters.industries)
+    // Expand each canonical industry into its raw-value list, then ILIKE-OR
+    // so partial matches (e.g. "SW Eng - Applications-674" → Engineering)
+    // are caught. We skip "Other" here in MVP — querying "everything NOT in
+    // any known group" is hard to express cleanly in PostgREST.
+    const expanded = filters.industries.flatMap((i) => INDUSTRY_GROUPS[i] ?? [])
+    if (expanded.length > 0) {
+      const orStr = expanded.map((v) => `category.ilike.%${v}%`).join(',')
+      query = query.or(orStr)
+    }
   }
   if (filters.contractTypes.length) {
-    query = query.in('contract_type', filters.contractTypes)
+    // Canonical labels map to many raw `contract_type` values; flatten + IN.
+    const values = filters.contractTypes.flatMap(
+      (c) => CONTRACT_TYPE_GROUPS[c] ?? [c],
+    )
+    query = query.in('contract_type', values)
   }
+  // Salary filters: keep NULL-salary jobs visible since the vast majority
+  // of jobs don't disclose salary. Each .or() becomes its own AND-combined
+  // OR group, so the combined predicate is:
+  //   (salary_max IS NULL OR salary_max >= smin)
+  //   AND (salary_min IS NULL OR salary_min <= smax)
   if (filters.salaryMin != null) {
-    query = query.gte('salary_max', filters.salaryMin)
+    query = query.or(`salary_max.is.null,salary_max.gte.${filters.salaryMin}`)
   }
   if (filters.salaryMax != null) {
-    query = query.lte('salary_min', filters.salaryMax)
+    query = query.or(`salary_min.is.null,salary_min.lte.${filters.salaryMax}`)
   }
   const cutoff = dateCutoffIso(filters.date)
   if (cutoff) query = query.gte('posted_at', cutoff)
@@ -122,32 +139,15 @@ export default async function JobsPage({
   const flagsRecord: Record<string, UserJobFlags> = {}
   for (const [k, v] of stateMap) flagsRecord[k] = v
 
-  // Compute industry options from a recent sample of jobs, capped to the
-  // top N by frequency. Cheap enough for MVP; if dataset grows we'll move
-  // this to a materialised view.
-  const { data: catData } = await supabase
-    .from('jobs')
-    .select('category')
-    .not('category', 'is', null)
-    .order('posted_at', { ascending: false })
-    .limit(INDUSTRY_SAMPLE_SIZE)
-  const counts: Record<string, number> = {}
-  for (const r of catData ?? []) {
-    const c = r.category as string | null
-    if (!c) continue
-    counts[c] = (counts[c] ?? 0) + 1
-  }
-  const industryOptions = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, INDUSTRY_MAX_OPTIONS)
-    .map(([c]) => c)
+  // Industry options are a fixed canonical taxonomy — no dynamic sampling.
+  // See INDUSTRY_GROUPS in @/lib/job-filters for the raw→canonical mapping.
 
   return (
     <JobsDashboard
       filters={filters}
       jobs={jobs}
       flagsRecord={flagsRecord}
-      industryOptions={industryOptions}
+      industryOptions={INDUSTRY_OPTIONS}
       error={error?.message ?? null}
     />
   )

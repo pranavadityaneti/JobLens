@@ -43,34 +43,110 @@ export const DEFAULT_FILTERS: FilterState = {
   perPage: DEFAULT_PER_PAGE,
 }
 
-export const LOCATION_OPTIONS: readonly string[] = [
-  'Bengaluru',
-  'Mumbai',
-  'Delhi',
-  'NCR',
-  'Hyderabad',
-  'Chennai',
-  'Pune',
-  'Kolkata',
-  'Gurgaon',
-  'Noida',
-  'Ahmedabad',
-  'Remote',
-  'Worldwide',
-  'India (anywhere)',
-]
+// Each label expands to a list of ILIKE patterns. Matches union.
+// Raw DB values vary wildly ("Bengaluru, India", "Bangalore", "Remote - US",
+// "FullTime" vs "Full-time") so we group user-visible labels to the patterns
+// they should match against.
+export const LOCATION_GROUPS: Record<string, string[]> = {
+  'Bengaluru / Bangalore': ['Bengaluru', 'Bangalore'],
+  'Mumbai': ['Mumbai'],
+  'Delhi / NCR': ['Delhi', 'NCR', 'New Delhi'],
+  'Hyderabad': ['Hyderabad'],
+  'Chennai': ['Chennai'],
+  'Pune': ['Pune'],
+  'Kolkata': ['Kolkata'],
+  'Gurgaon / Gurugram': ['Gurugram', 'Gurgaon'],
+  'Noida': ['Noida'],
+  'Ahmedabad': ['Ahmedabad'],
+  'Remote (India)': ['Remote, India', 'Remote - India', 'India - Remote'],
+  // "Remote" matches any string containing "remote" (including "Remote - US")
+  // — intentional: user opted in to remote roles regardless of country.
+  'Remote (Global)': ['Distributed', 'Worldwide', 'Anywhere', 'Remote'],
+  'India (anywhere)': [
+    'Bengaluru', 'Bangalore', 'Mumbai', 'Delhi', 'NCR', 'Hyderabad',
+    'Chennai', 'Pune', 'Kolkata', 'Gurugram', 'Gurgaon', 'Noida',
+    'Ahmedabad', 'India',
+  ],
+}
 
-export const CONTRACT_TYPE_OPTIONS: readonly string[] = [
-  'Full-time',
-  'Part-time',
-  'Contract',
-  'Freelance',
-  'Internship',
-  'Permanent',
-  'Temporary',
-  'FullTime',
-  'PartTime',
-]
+export const LOCATION_OPTIONS: readonly string[] = Object.keys(LOCATION_GROUPS)
+
+// Contract type values arrive in many shapes ("FullTime", "full_time",
+// "permanent" all mean the same thing). Group canonical labels to the raw
+// values we OR-match against in `contract_type`.
+export const CONTRACT_TYPE_GROUPS: Record<string, string[]> = {
+  'Full-time': ['Full-time', 'FullTime', 'Full Time', 'full_time', 'fulltime', 'permanent', 'Permanent'],
+  'Part-time': ['Part-time', 'PartTime', 'Part Time', 'part_time', 'parttime'],
+  'Contract': ['Contract', 'contract', 'Contractor'],
+  'Internship': ['Internship', 'intern', 'Intern', 'Trainee'],
+  'Freelance': ['Freelance', 'freelance'],
+  'Temporary': ['Temporary', 'temporary', 'Temp'],
+}
+
+export const CONTRACT_TYPE_OPTIONS: readonly string[] = Object.keys(CONTRACT_TYPE_GROUPS)
+
+// Canonical industry taxonomy. Raw DB `category` strings are messy
+// (company-internal codes like "SW Eng - Applications-674") so we map them
+// to a stable set of buckets users can reason about.
+export const INDUSTRY_GROUPS: Record<string, string[]> = {
+  'Engineering': [
+    'Engineering', 'Software Engineering', 'Platforms Engineering',
+    'Platform Engineering', 'Sec Engineering', 'Solution Engineering',
+    'Engineering Jobs', 'Backend Engineering', 'Frontend Engineering',
+    'DevOps', 'Infrastructure', 'Site Reliability',
+  ],
+  'Product': ['Product', 'Product Management', 'PM'],
+  'Design': ['Design', 'Product Design', 'UX', 'UI', 'Visual Design'],
+  'Data & Analytics': [
+    'Data', 'Data Engineering', 'Data Science', 'Analytics',
+    'Machine Learning', 'ML', 'AI',
+  ],
+  'Sales': [
+    'Sales', 'Sales Jobs', 'Field Sales', 'Sales Development',
+    'GTM Tech', 'Go To Market', 'Account Executive',
+    'EMEA - Commercial', 'EMEA - Enterprise', 'Commercial',
+  ],
+  'Marketing': [
+    'Marketing', 'PR, Advertising & Marketing Jobs',
+    'PR Advertising & Marketing Jobs', 'Growth', 'Brand', 'PMM',
+  ],
+  'Customer Success / Support': [
+    'Customer Success', 'Customer Support', 'CS', 'Customer Experience',
+  ],
+  'Operations': ['Operations', 'Ops', 'Business Operations'],
+  'HR & People': [
+    'HR', 'People', 'Recruiting', 'HR & Recruitment Jobs', 'Talent',
+    'People Operations',
+  ],
+  'Finance & Accounting': [
+    'Finance', 'Accounting', 'Accounting & Finance Jobs', 'FP&A',
+  ],
+  'Legal': ['Legal', 'Compliance'],
+  'Security': ['Security', 'Information Security', 'InfoSec'],
+  'IT': ['IT Jobs', 'IT Operations', 'IT Support'],
+  'Healthcare': ['Healthcare', 'Healthcare & Nursing Jobs', 'Medical'],
+}
+
+export const INDUSTRY_OPTIONS: readonly string[] = [...Object.keys(INDUSTRY_GROUPS), 'Other']
+
+/**
+ * Map a raw `category` string to its canonical industry bucket.
+ * Returns 'Other' when nothing matches. Exact match wins over fuzzy contains
+ * so "Engineering" lands in the Engineering bucket cleanly while messy
+ * strings like "SW Eng - Applications-674" still get caught by the contains
+ * pass.
+ */
+export function canonicalIndustry(raw: string | null): string {
+  if (!raw) return 'Other'
+  const rawLower = raw.toLowerCase()
+  for (const [label, raws] of Object.entries(INDUSTRY_GROUPS)) {
+    if (raws.some((v) => v.toLowerCase() === rawLower)) return label
+  }
+  for (const [label, raws] of Object.entries(INDUSTRY_GROUPS)) {
+    if (raws.some((v) => rawLower.includes(v.toLowerCase()))) return label
+  }
+  return 'Other'
+}
 
 export const WORK_MODEL_OPTIONS: readonly WorkModel[] = ['Remote', 'Hybrid', 'On-site']
 
