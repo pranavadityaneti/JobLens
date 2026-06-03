@@ -17,7 +17,11 @@ export function JobDetailSheet({ job, userState, open, onOpenChange }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[80vw] max-w-none flex flex-col gap-0 p-6"
+        // Inline style to defeat sheet.tsx's `data-[side=right]:w-3/4`
+        // and `data-[side=right]:sm:max-w-sm` defaults. Class-based overrides
+        // lose to those data-variant utilities; inline always wins.
+        style={{ width: '80vw', maxWidth: 'none' }}
+        className="flex flex-col gap-0 p-6"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>{job?.title ?? 'Job details'}</SheetTitle>

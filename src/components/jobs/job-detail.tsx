@@ -216,19 +216,19 @@ export function JobDetail({
         </div>
       </header>
 
-      <hr className="border-zinc-200" />
+      <hr className="my-6 border-zinc-200" />
 
       {/* SECTION 2: Quick facts */}
-      <section className="grid grid-cols-2 gap-3 py-5 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <QuickFact icon={Wallet} label="Salary" value={salary ?? 'Not disclosed'} />
         <QuickFact icon={Briefcase} label="Experience" value={experience ?? 'Not specified'} />
         <QuickFact icon={Briefcase} label="Job Type" value={jobType ?? 'Not specified'} />
         <QuickFact icon={MapPin} label="Work Model" value={workModel ?? 'Not specified'} />
       </section>
 
-      <hr className="border-zinc-200" />
+      <hr className="my-6 border-zinc-200" />
 
-      <div className="flex-1 overflow-y-auto px-2 py-6">
+      <div className="flex-1 overflow-y-auto px-2 pb-6">
         {/* SECTION 3: About the role */}
         <section>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
@@ -258,7 +258,7 @@ export function JobDetail({
           )}
         </section>
 
-        <hr className="my-6 border-zinc-200" />
+        <hr className="my-10 border-zinc-200" />
 
         {/* SECTION 4: Tags / taxonomy */}
         {(job.category || job.contract_type || job.contract_time) && (
@@ -285,7 +285,7 @@ export function JobDetail({
                 )}
               </div>
             </section>
-            <hr className="my-6 border-zinc-200" />
+            <hr className="my-10 border-zinc-200" />
           </>
         )}
 
