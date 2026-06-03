@@ -1,32 +1,55 @@
 // src/app/(app)/page.tsx
 import { getSupabaseServer } from '@/lib/supabase/server'
+import { JobCard, type JobCardData } from '@/components/jobs/job-card'
+import { IngestButton } from '@/components/jobs/ingest-button'
 
 export default async function JobsPage() {
   const supabase = await getSupabaseServer()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const phoneDisplay = user?.phone ? `+${user.phone}` : 'Unknown'
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(
+      'id, source, source_id, title, company, location, salary_min, salary_max, salary_currency, category, contract_type, posted_at, apply_url',
+    )
+    .order('posted_at', { ascending: false })
+    .limit(50)
+
+  const jobs = (data ?? []) as JobCardData[]
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-950">
-          Jobs
-        </h1>
-        <p className="mt-2 text-zinc-500">
-          Your personalized job feed lands here in Sessions 4–6.
-        </p>
+    <div className="mx-auto max-w-5xl px-6 py-12">
+      <header className="mb-8 flex items-end justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Jobs</h1>
+          <p className="mt-2 text-zinc-500">
+            {jobs.length > 0
+              ? `Showing ${jobs.length} most recent job${jobs.length === 1 ? '' : 's'}.`
+              : 'No jobs ingested yet.'}
+          </p>
+        </div>
+        <IngestButton />
       </header>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <p className="text-xs uppercase tracking-wide text-zinc-500">
-          Signed in as
-        </p>
-        <p className="mt-2 text-lg font-semibold text-zinc-950">
-          {phoneDisplay}
-        </p>
-      </div>
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Failed to load jobs: {error.message}
+        </div>
+      )}
+
+      {jobs.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-12 text-center">
+          <h2 className="text-base font-semibold text-zinc-900">No jobs yet</h2>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            Click <span className="font-medium text-zinc-700">Fetch latest from Adzuna</span> in the top-right to pull
+            the first batch.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {jobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
