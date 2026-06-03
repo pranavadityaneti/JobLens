@@ -27,7 +27,9 @@ export function JobCardActions({
   const [modalOpen, setModalOpen] = useState(false)
   const [, startTransition] = useTransition()
 
-  const toggleSave = () => {
+  const toggleSave = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     const next: UserJobState | null = state === 'saved' ? null : 'saved'
     setState(next)
     startTransition(async () => {
@@ -36,7 +38,9 @@ export function JobCardActions({
     })
   }
 
-  const hide = () => {
+  const hide = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setState('hidden')
     startTransition(async () => {
       const result = await setUserJobState(jobId, 'hidden')
@@ -83,7 +87,11 @@ export function JobCardActions({
         </button>
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setModalOpen(true)
+          }}
           className="ml-1 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-600"
         >
           Apply

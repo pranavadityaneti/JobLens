@@ -1,4 +1,5 @@
 // src/components/jobs/job-card.tsx
+import Link from 'next/link'
 import { Building2, MapPin, Clock } from 'lucide-react'
 import type { UserJobState } from '@/lib/user-jobs'
 import { JobCardActions } from './job-card-actions'
@@ -59,12 +60,18 @@ export function JobCard({
 }) {
   const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency)
   return (
-    <article className="flex gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <article className="relative flex gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      {/* Click overlay — covers card, but action buttons sit above it via z-index */}
+      <Link
+        href={`/jobs/${job.id}`}
+        aria-label={`View details for ${job.title} at ${job.company}`}
+        className="absolute inset-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      />
       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
         <span className="text-lg font-semibold">{companyInitial(job.company)}</span>
       </div>
       <div className="min-w-0 flex-1">
-        <header className="flex items-start justify-between gap-4">
+        <header className="relative z-10 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-zinc-950">{job.title}</h3>
             <p className="mt-0.5 flex items-center gap-1.5 text-sm text-zinc-600">
@@ -72,13 +79,16 @@ export function JobCard({
               {job.company}
             </p>
           </div>
-          <JobCardActions
-            jobId={job.id}
-            jobTitle={job.title}
-            company={job.company}
-            applyUrl={job.apply_url}
-            initialState={userState}
-          />
+          {/* z-10 so actions sit above the click overlay */}
+          <div className="relative z-10">
+            <JobCardActions
+              jobId={job.id}
+              jobTitle={job.title}
+              company={job.company}
+              applyUrl={job.apply_url}
+              initialState={userState}
+            />
+          </div>
         </header>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500">
           <span className="flex items-center gap-1">
