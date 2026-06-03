@@ -2,7 +2,7 @@
 'use client'
 
 import { Building2, Clock, MapPin } from 'lucide-react'
-import type { UserJobState } from '@/lib/user-jobs'
+import type { UserJobFlags } from '@/lib/user-jobs'
 import { CompanyLogo } from './company-logo'
 import { JobCardActions } from './job-card-actions'
 
@@ -51,11 +51,11 @@ function formatPostedAt(iso: string): string {
 
 export function JobCard({
   job,
-  userState,
+  flags,
   onSelect,
 }: {
   job: JobCardData
-  userState: UserJobState | null
+  flags: UserJobFlags
   onSelect?: () => void
 }) {
   const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency)
@@ -90,7 +90,7 @@ export function JobCard({
               jobTitle={job.title}
               company={job.company}
               applyUrl={job.apply_url}
-              initialState={userState}
+              initialFlags={flags}
             />
           </div>
         </header>

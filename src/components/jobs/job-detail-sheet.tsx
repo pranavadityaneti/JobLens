@@ -2,17 +2,17 @@
 'use client'
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import type { UserJobState } from '@/lib/user-jobs'
+import type { UserJobFlags } from '@/lib/user-jobs'
 import { JobDetail, type JobDetailData } from './job-detail'
 
 type Props = {
   job: JobDetailData | null
-  userState: UserJobState | null
+  flags: UserJobFlags
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function JobDetailSheet({ job, userState, open, onOpenChange }: Props) {
+export function JobDetailSheet({ job, flags, open, onOpenChange }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -26,7 +26,7 @@ export function JobDetailSheet({ job, userState, open, onOpenChange }: Props) {
         <SheetHeader className="sr-only">
           <SheetTitle>{job?.title ?? 'Job details'}</SheetTitle>
         </SheetHeader>
-        {job && <JobDetail job={job} userState={userState} />}
+        {job && <JobDetail job={job} flags={flags} />}
       </SheetContent>
     </Sheet>
   )

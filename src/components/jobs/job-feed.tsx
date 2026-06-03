@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { JobCard } from './job-card'
 import { JobDetailSheet } from './job-detail-sheet'
 import type { JobDetailData } from './job-detail'
-import type { UserJobState } from '@/lib/user-jobs'
+import { NO_FLAGS, type UserJobFlags } from '@/lib/user-jobs'
 
 export type FeedJob = JobDetailData & {
   source: string
@@ -13,13 +13,13 @@ export type FeedJob = JobDetailData & {
 
 type Props = {
   jobs: FeedJob[]
-  stateMap: Record<string, UserJobState>
+  flagsMap: Record<string, UserJobFlags>
 }
 
-export function JobFeed({ jobs, stateMap }: Props) {
+export function JobFeed({ jobs, flagsMap }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = selectedId ? jobs.find((j) => j.id === selectedId) ?? null : null
-  const selectedState = selected ? stateMap[selected.id] ?? null : null
+  const selectedFlags = selected ? flagsMap[selected.id] ?? NO_FLAGS : NO_FLAGS
 
   return (
     <>
@@ -28,14 +28,14 @@ export function JobFeed({ jobs, stateMap }: Props) {
           <JobCard
             key={job.id}
             job={job}
-            userState={stateMap[job.id] ?? null}
+            flags={flagsMap[job.id] ?? NO_FLAGS}
             onSelect={() => setSelectedId(job.id)}
           />
         ))}
       </div>
       <JobDetailSheet
         job={selected}
-        userState={selectedState}
+        flags={selectedFlags}
         open={!!selected}
         onOpenChange={(open) => {
           if (!open) setSelectedId(null)

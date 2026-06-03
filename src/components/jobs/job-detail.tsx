@@ -1,7 +1,7 @@
 // src/components/jobs/job-detail.tsx
 import { Building2, Briefcase, Clock, MapPin, Wallet, Sparkles } from 'lucide-react'
 import DOMPurify from 'isomorphic-dompurify'
-import type { UserJobState } from '@/lib/user-jobs'
+import type { UserJobFlags } from '@/lib/user-jobs'
 import { CompanyLogo } from './company-logo'
 import { JobCardActions } from './job-card-actions'
 
@@ -178,10 +178,10 @@ function QuickFact({
 
 export function JobDetail({
   job,
-  userState,
+  flags,
 }: {
   job: JobDetailData
-  userState: UserJobState | null
+  flags: UserJobFlags
 }) {
   const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency)
   const experience = extractExperience(job.title, job.description)
@@ -308,7 +308,7 @@ export function JobDetail({
           jobTitle={job.title}
           company={job.company}
           applyUrl={job.apply_url}
-          initialState={userState}
+          initialFlags={flags}
         />
       </div>
     </div>
