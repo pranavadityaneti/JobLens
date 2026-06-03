@@ -15,7 +15,7 @@ import {
 } from '@/lib/sources/companies'
 import type { ParsedJob } from '@/lib/sources/types'
 import { upsertJobs } from '@/lib/jobs'
-import { setJobState, type UserJobState } from '@/lib/user-jobs'
+import { setUserJobFlag, type UserJobFlag } from '@/lib/user-jobs'
 
 export async function signOut() {
   const supabase = await getSupabaseServer()
@@ -121,17 +121,18 @@ export async function ingestAllSources(): Promise<IngestAllResult> {
 }
 
 /**
- * Set or clear the current user's state for a given job.
- * `state = null` removes any existing relationship.
+ * Set or clear a single flag (saved | applied | hidden) on a job for the
+ * current user. Other flags on the same row are preserved.
  *
- * Revalidates the paths whose contents change with this state:
- * /, /saved, /applied.
+ * Revalidates the paths whose contents may change: /, /saved, /applied,
+ * and the job detail page.
  */
-export async function setUserJobState(
+export async function setUserJobFlagAction(
   jobId: string,
-  state: UserJobState | null,
-): Promise<{ ok: true; state: UserJobState | null } | { ok: false; error: string }> {
-  const result = await setJobState(jobId, state)
+  flag: UserJobFlag,
+  value: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const result = await setUserJobFlag(jobId, flag, value)
   if (result.ok) {
     revalidatePath('/')
     revalidatePath('/saved')
