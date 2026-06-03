@@ -1,9 +1,11 @@
 // src/app/(app)/applied/page.tsx
-import { getJobsByUserState } from '@/lib/user-jobs'
-import { JobCard, type JobCardData } from '@/components/jobs/job-card'
+import { getJobsByUserState, type UserJobState } from '@/lib/user-jobs'
+import { JobFeed, type FeedJob } from '@/components/jobs/job-feed'
 
 export default async function AppliedPage() {
-  const jobs = await getJobsByUserState('applied')
+  const jobs = (await getJobsByUserState('applied')) as unknown as FeedJob[]
+  const stateRecord: Record<string, UserJobState> = {}
+  for (const j of jobs) stateRecord[j.id] = 'applied'
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -12,7 +14,7 @@ export default async function AppliedPage() {
         <p className="mt-2 text-zinc-500">
           {jobs.length > 0
             ? `Tracking ${jobs.length} application${jobs.length === 1 ? '' : 's'}.`
-            : "Jobs you apply to will appear here so you can track them."}
+            : 'Jobs you apply to will appear here so you can track them.'}
         </p>
       </header>
 
@@ -24,15 +26,7 @@ export default async function AppliedPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {jobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job as unknown as JobCardData}
-              userState="applied"
-            />
-          ))}
-        </div>
+        <JobFeed jobs={jobs} stateMap={stateRecord} />
       )}
     </div>
   )

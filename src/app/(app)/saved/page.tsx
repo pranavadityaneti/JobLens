@@ -1,9 +1,11 @@
 // src/app/(app)/saved/page.tsx
-import { getJobsByUserState } from '@/lib/user-jobs'
-import { JobCard, type JobCardData } from '@/components/jobs/job-card'
+import { getJobsByUserState, type UserJobState } from '@/lib/user-jobs'
+import { JobFeed, type FeedJob } from '@/components/jobs/job-feed'
 
 export default async function SavedPage() {
-  const jobs = await getJobsByUserState('saved')
+  const jobs = (await getJobsByUserState('saved')) as unknown as FeedJob[]
+  const stateRecord: Record<string, UserJobState> = {}
+  for (const j of jobs) stateRecord[j.id] = 'saved'
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -24,15 +26,7 @@ export default async function SavedPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {jobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job as unknown as JobCardData}
-              userState="saved"
-            />
-          ))}
-        </div>
+        <JobFeed jobs={jobs} stateMap={stateRecord} />
       )}
     </div>
   )

@@ -1,7 +1,9 @@
 // src/components/jobs/job-card.tsx
-import Link from 'next/link'
-import { Building2, MapPin, Clock } from 'lucide-react'
+'use client'
+
+import { Building2, Clock, MapPin } from 'lucide-react'
 import type { UserJobState } from '@/lib/user-jobs'
+import { CompanyLogo } from './company-logo'
 import { JobCardActions } from './job-card-actions'
 
 export type JobCardData = {
@@ -14,7 +16,7 @@ export type JobCardData = {
   salary_currency: string | null
   category: string | null
   contract_type: string | null
-  posted_at: string // ISO
+  posted_at: string
   apply_url: string
   source: string
 }
@@ -47,29 +49,32 @@ function formatPostedAt(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
-function companyInitial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || '?'
-}
-
 export function JobCard({
   job,
   userState,
+  onSelect,
 }: {
   job: JobCardData
   userState: UserJobState | null
+  onSelect?: () => void
 }) {
   const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency)
+
   return (
-    <article className="relative flex gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-      {/* Click overlay — covers card, but action buttons sit above it via z-index */}
-      <Link
-        href={`/jobs/${job.id}`}
-        aria-label={`View details for ${job.title} at ${job.company}`}
-        className="absolute inset-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-      />
-      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-        <span className="text-lg font-semibold">{companyInitial(job.company)}</span>
-      </div>
+    <article
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (onSelect && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      tabIndex={onSelect ? 0 : -1}
+      role={onSelect ? 'button' : undefined}
+      aria-label={onSelect ? `View details for ${job.title} at ${job.company}` : undefined}
+      className="relative flex cursor-pointer gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+    >
+      <CompanyLogo company={job.company} size="sm" />
       <div className="min-w-0 flex-1">
         <header className="relative z-10 flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -79,7 +84,6 @@ export function JobCard({
               {job.company}
             </p>
           </div>
-          {/* z-10 so actions sit above the click overlay */}
           <div className="relative z-10">
             <JobCardActions
               jobId={job.id}

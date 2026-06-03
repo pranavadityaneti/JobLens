@@ -3,39 +3,36 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 import {
   getUserJobIdsByStates,
   getUserStatesForJobs,
+  type UserJobState,
 } from '@/lib/user-jobs'
-import { JobCard, type JobCardData } from '@/components/jobs/job-card'
+import { JobFeed, type FeedJob } from '@/components/jobs/job-feed'
 
 const PAGE_LIMIT = 50
 
 export default async function JobsPage() {
   const supabase = await getSupabaseServer()
-
-  // Pull jobs the user has applied to or hidden — we'll filter them out.
   const excludedJobIds = await getUserJobIdsByStates(['applied', 'hidden'])
 
-  // Query: most recent jobs minus the excluded ones. Use .not('id', 'in', ...)
-  // when there are excluded ids; otherwise plain query.
   let query = supabase
     .from('jobs')
     .select(
-      'id, source, source_id, title, company, location, salary_min, salary_max, salary_currency, category, contract_type, posted_at, apply_url',
+      'id, source, source_id, title, company, location, description, apply_url, salary_min, salary_max, salary_currency, category, contract_type, contract_time, posted_at',
     )
     .order('posted_at', { ascending: false })
     .limit(PAGE_LIMIT)
 
   if (excludedJobIds.size > 0) {
-    // Postgres "id NOT IN (uuid_list)" via PostgREST: not.in.(a,b,c)
     const list = Array.from(excludedJobIds).join(',')
     query = query.not('id', 'in', `(${list})`)
   }
 
   const { data, error } = await query
-  const jobs = (data ?? []) as JobCardData[]
+  const jobs = (data ?? []) as FeedJob[]
 
-  // For remaining jobs, look up whether each is saved by the user (the
-  // remaining states are 'saved' or none).
+  // Plain object map (client-serializable)
   const stateMap = await getUserStatesForJobs(jobs.map((j) => j.id))
+  const stateRecord: Record<string, UserJobState> = {}
+  for (const [k, v] of stateMap) stateRecord[k] = v
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -62,15 +59,7 @@ export default async function JobsPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {jobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              userState={stateMap.get(job.id) ?? null}
-            />
-          ))}
-        </div>
+        <JobFeed jobs={jobs} stateMap={stateRecord} />
       )}
     </div>
   )
