@@ -35,6 +35,7 @@ export function AvatarMenu({ phone }: { phone: string }) {
         <form action={signOut}>
           <DropdownMenuItem
             render={<button type="submit" />}
+            nativeButton
             className="w-full cursor-pointer"
           >
             <LogOut className="mr-2 h-4 w-4" />
