@@ -17,7 +17,7 @@ export function JobDetailSheet({ job, userState, open, onOpenChange }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[80vw] sm:max-w-4xl flex flex-col gap-0 p-6"
+        className="w-[80vw] max-w-none flex flex-col gap-0 p-6"
       >
         <SheetHeader className="sr-only">
           <SheetTitle>{job?.title ?? 'Job details'}</SheetTitle>
