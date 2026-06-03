@@ -1,9 +1,9 @@
 // src/app/(app)/page.tsx
 import { getSupabaseServer } from '@/lib/supabase/server'
 import {
-  getUserJobIdsByStates,
-  getUserStatesForJobs,
-  type UserJobState,
+  getUserJobIdsWithAnyFlag,
+  getUserFlagsForJobs,
+  type UserJobFlags,
 } from '@/lib/user-jobs'
 import { JobFeed, type FeedJob } from '@/components/jobs/job-feed'
 
@@ -11,7 +11,9 @@ const PAGE_LIMIT = 50
 
 export default async function JobsPage() {
   const supabase = await getSupabaseServer()
-  const excludedJobIds = await getUserJobIdsByStates(['applied', 'hidden'])
+  // Hide jobs the user has already applied to or hidden. Saved jobs DO
+  // appear in the main feed so the user can still unsave or apply.
+  const excludedJobIds = await getUserJobIdsWithAnyFlag(['applied', 'hidden'])
 
   let query = supabase
     .from('jobs')
@@ -30,9 +32,9 @@ export default async function JobsPage() {
   const jobs = (data ?? []) as FeedJob[]
 
   // Plain object map (client-serializable)
-  const stateMap = await getUserStatesForJobs(jobs.map((j) => j.id))
-  const stateRecord: Record<string, UserJobState> = {}
-  for (const [k, v] of stateMap) stateRecord[k] = v
+  const flagsMap = await getUserFlagsForJobs(jobs.map((j) => j.id))
+  const flagsRecord: Record<string, UserJobFlags> = {}
+  for (const [k, v] of flagsMap) flagsRecord[k] = v
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -59,7 +61,7 @@ export default async function JobsPage() {
           </p>
         </div>
       ) : (
-        <JobFeed jobs={jobs} stateMap={stateRecord} />
+        <JobFeed jobs={jobs} flagsMap={flagsRecord} />
       )}
     </div>
   )

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getSupabaseServer } from '@/lib/supabase/server'
-import { getUserStatesForJobs } from '@/lib/user-jobs'
+import { getUserFlagsForJobs, NO_FLAGS } from '@/lib/user-jobs'
 import { JobDetail, type JobDetailData } from '@/components/jobs/job-detail'
 
 export default async function JobDetailPage({
@@ -24,8 +24,8 @@ export default async function JobDetailPage({
 
   if (error || !job) notFound()
 
-  const stateMap = await getUserStatesForJobs([job.id])
-  const userState = stateMap.get(job.id) ?? null
+  const flagsMap = await getUserFlagsForJobs([job.id])
+  const flags = flagsMap.get(job.id) ?? NO_FLAGS
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
@@ -38,7 +38,7 @@ export default async function JobDetailPage({
       </Link>
 
       <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <JobDetail job={job as JobDetailData} userState={userState} />
+        <JobDetail job={job as JobDetailData} flags={flags} />
       </div>
     </div>
   )
