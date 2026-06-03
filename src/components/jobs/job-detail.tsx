@@ -89,76 +89,81 @@ function extractWorkModel(description: string): string | null {
 }
 
 /**
- * Bold-highlight common label headers in raw description text.
- * Returns an array of React nodes so we don't have to use
- * dangerouslySetInnerHTML.
+ * Heuristic detection of "this short line is a sub-heading inside a job
+ * description". We can't rely on a fixed list of labels — different job
+ * boards/companies write the same idea with infinite variation
+ * ("Who we are" / "About Stripe" / "About the team" — none of which match
+ * a closed pattern list, and few of them end with a colon).
+ *
+ * Rules (intersection):
+ *   - non-empty, ≤ 60 chars, ≤ 8 words
+ *   - starts with a capital letter
+ *   - has no sentence-grade punctuation (. , ; ? !) — except a trailing colon
+ *   - not a bullet or numbered list marker
+ *   - followed by a non-empty content line
+ *
+ * These are conservative enough that real prose lines (which always have
+ * commas/periods or are long) won't get false-positived.
  */
-const LABEL_PATTERNS = [
-  'Total Experience',
-  'Experience',
-  'Job Type',
-  'Job Role',
-  'Job Description',
-  'Job Summary',
-  'Responsibilities',
-  'Key Responsibilities',
-  'Requirements',
-  'Required Skills',
-  'Required Qualifications',
-  'Qualifications',
-  'Skills',
-  'Key Skills',
-  'Technical Skills',
-  'Education',
-  'Eligibility',
-  'About the Role',
-  'About the Company',
-  'About Us',
-  'About the Job',
-  'Benefits',
-  'Perks',
-  'What You’ll Do',
-  'What You Will Do',
-  'What We Offer',
-  'Location',
-  'Salary',
-  'Compensation',
-  'Roles & Responsibilities',
-  'Roles and Responsibilities',
-]
+function isLikelyHeading(line: string, nextLine: string | undefined): boolean {
+  const trimmed = line.trim()
+  if (!trimmed) return false
+  if (trimmed.length > 60) return false
+  const words = trimmed.split(/\s+/)
+  if (words.length > 8) return false
+  if (!/^[A-Z]/.test(trimmed)) return false
+  // Strip a trailing colon before the punctuation check — colons are OK on
+  // headings, other sentence punctuation is not.
+  const checkable = trimmed.replace(/:$/, '')
+  if (/[.;?!,]/.test(checkable)) return false
+  if (/^\d+[.)]/.test(checkable)) return false // numbered list
+  if (/^[•\-*]/.test(checkable)) return false // bullet
+  if (!nextLine || !nextLine.trim()) return false
+  return true
+}
 
+/**
+ * Walk the description line by line. Treat heading-shaped lines as block
+ * <strong> elements with `mt-6` (except the first) so sub-sections are
+ * visibly separated; accumulate everything else into preserved text
+ * segments. Whitespace around heading transitions is trimmed so content
+ * sits flush under its heading.
+ */
 function highlightLabels(text: string): React.ReactNode[] {
-  const pattern = new RegExp(
-    `(?:^|\\n|\\.\\s+)\\s*(${LABEL_PATTERNS.map((p) =>
-      p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-    ).join('|')})\\s*:`,
-    'gi',
-  )
+  const lines = text.split('\n')
   const nodes: React.ReactNode[] = []
-  let lastIndex = 0
-  let match: RegExpExecArray | null
+  let segments: string[] = []
   let labelIdx = 0
-  while ((match = pattern.exec(text)) !== null) {
-    // Trim trailing whitespace from the preceding text — the block-level
-    // strong below creates its own line break, so we don't want extra
-    // dangling whitespace that visually offsets the heading.
-    const before = text.slice(lastIndex, match.index).replace(/\s+$/, '')
-    if (before) nodes.push(before)
-    nodes.push(
-      <strong
-        key={`label-${labelIdx}`}
-        className={`${labelIdx === 0 ? '' : 'mt-6 '}block font-semibold text-zinc-900`}
-      >
-        {match[1]}:
-      </strong>,
-    )
-    lastIndex = match.index + match[0].length
-    labelIdx++
+
+  const flushSegments = () => {
+    if (segments.length === 0) return
+    // Strip leading and trailing blank lines around content blocks so the
+    // heading→content and content→next-heading transitions look tight.
+    const joined = segments.join('\n').replace(/^\s+|\s+$/g, '')
+    if (joined) nodes.push(joined)
+    segments = []
   }
-  // Trim leading whitespace on the trailing text so content sits directly
-  // under the heading instead of with a phantom blank line above.
-  const tail = text.slice(lastIndex).replace(/^\s+/, '')
-  if (tail) nodes.push(tail)
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const next = lines[i + 1]
+    if (isLikelyHeading(line, next)) {
+      flushSegments()
+      const headingText = line.trim().replace(/:$/, '')
+      nodes.push(
+        <strong
+          key={`label-${labelIdx}`}
+          className={`${labelIdx === 0 ? '' : 'mt-6 '}block font-semibold text-zinc-900`}
+        >
+          {headingText}
+        </strong>,
+      )
+      labelIdx++
+    } else {
+      segments.push(line)
+    }
+  }
+  flushSegments()
   return nodes
 }
 
