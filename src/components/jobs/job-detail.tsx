@@ -137,21 +137,27 @@ function highlightLabels(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
   let lastIndex = 0
   let match: RegExpExecArray | null
-  let i = 0
+  let labelIdx = 0
   while ((match = pattern.exec(text)) !== null) {
-    const before = text.slice(lastIndex, match.index)
+    // Trim trailing whitespace from the preceding text — the block-level
+    // strong below creates its own line break, so we don't want extra
+    // dangling whitespace that visually offsets the heading.
+    const before = text.slice(lastIndex, match.index).replace(/\s+$/, '')
     if (before) nodes.push(before)
-    // Reconstruct the original leading separator + the label, bolded
-    const leading = match[0].slice(0, match[0].toLowerCase().indexOf(match[1].toLowerCase()))
-    if (leading) nodes.push(leading)
     nodes.push(
-      <strong key={`label-${i++}`} className="font-semibold text-zinc-900">
+      <strong
+        key={`label-${labelIdx}`}
+        className={`${labelIdx === 0 ? '' : 'mt-6 '}block font-semibold text-zinc-900`}
+      >
         {match[1]}:
       </strong>,
     )
     lastIndex = match.index + match[0].length
+    labelIdx++
   }
-  const tail = text.slice(lastIndex)
+  // Trim leading whitespace on the trailing text so content sits directly
+  // under the heading instead of with a phantom blank line above.
+  const tail = text.slice(lastIndex).replace(/^\s+/, '')
   if (tail) nodes.push(tail)
   return nodes
 }
@@ -216,17 +222,17 @@ export function JobDetail({
         </div>
       </header>
 
-      <hr className="my-6 border-zinc-200" />
+      <hr className="border-zinc-200" />
 
       {/* SECTION 2: Quick facts */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 py-5 sm:grid-cols-4">
         <QuickFact icon={Wallet} label="Salary" value={salary ?? 'Not disclosed'} />
         <QuickFact icon={Briefcase} label="Experience" value={experience ?? 'Not specified'} />
         <QuickFact icon={Briefcase} label="Job Type" value={jobType ?? 'Not specified'} />
         <QuickFact icon={MapPin} label="Work Model" value={workModel ?? 'Not specified'} />
       </section>
 
-      <hr className="my-6 border-zinc-200" />
+      <hr className="border-zinc-200" />
 
       <div className="flex-1 overflow-y-auto px-2 pb-6">
         {/* SECTION 3: About the role */}
@@ -236,7 +242,7 @@ export function JobDetail({
           </h3>
           {looksLikeHtml(job.description) ? (
             <div
-              className="prose prose-sm prose-zinc mt-3 max-w-none text-zinc-700 [&_a]:text-emerald-700 [&_li]:my-0.5"
+              className="prose prose-sm prose-zinc mt-3 max-w-none text-zinc-700 [&_a]:text-emerald-700 [&_li]:my-0.5 [&_h1]:mt-8 [&_h1]:font-semibold [&_h1]:text-zinc-900 [&_h2]:mt-8 [&_h2]:font-semibold [&_h2]:text-zinc-900 [&_h3]:mt-8 [&_h3]:font-semibold [&_h3]:text-zinc-900 [&_h4]:mt-6 [&_h4]:font-semibold [&_h4]:text-zinc-900 [&_h5]:mt-6 [&_h5]:font-semibold [&_h5]:text-zinc-900 [&_h6]:mt-6 [&_h6]:font-semibold [&_h6]:text-zinc-900 [&_p]:mt-3 [&_ul]:mt-3 [&_ol]:mt-3 [&_*:first-child]:mt-0"
               dangerouslySetInnerHTML={{
                 __html: DOMPurify.sanitize(job.description, {
                   ALLOWED_TAGS: [
@@ -258,7 +264,7 @@ export function JobDetail({
           )}
         </section>
 
-        <hr className="my-10 border-zinc-200" />
+        <hr className="my-6 border-zinc-200" />
 
         {/* SECTION 4: Tags / taxonomy */}
         {(job.category || job.contract_type || job.contract_time) && (
@@ -285,7 +291,7 @@ export function JobDetail({
                 )}
               </div>
             </section>
-            <hr className="my-10 border-zinc-200" />
+            <hr className="my-6 border-zinc-200" />
           </>
         )}
 
