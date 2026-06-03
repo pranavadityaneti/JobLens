@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { setUserJobState } from '@/app/(app)/actions'
+import { setUserJobFlagAction } from '@/app/(app)/actions'
 
 type Props = {
   open: boolean
@@ -21,6 +21,7 @@ type Props = {
   jobTitle: string
   company: string
   applyUrl: string
+  onApplied?: () => void
 }
 
 export function ApplyModal({
@@ -30,21 +31,18 @@ export function ApplyModal({
   jobTitle,
   company,
   applyUrl,
+  onApplied,
 }: Props) {
   const [isPending, startTransition] = useTransition()
 
   const handleConfirm = () => {
     startTransition(async () => {
-      const result = await setUserJobState(jobId, 'applied')
-      // Open in new tab regardless of state-set success — user wants to apply
-      // even if our bookkeeping fails.
+      const result = await setUserJobFlagAction(jobId, 'applied', true)
       window.open(applyUrl, '_blank', 'noopener,noreferrer')
       if (result.ok) {
+        onApplied?.()
         onOpenChange(false)
       } else {
-        // On the rare failure, leave modal open so user sees the error.
-        // (Real errors here are likely network or auth; we surface them
-        // unobtrusively.)
         console.error('Failed to mark applied:', result.error)
         onOpenChange(false)
       }

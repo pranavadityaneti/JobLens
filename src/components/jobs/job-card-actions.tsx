@@ -3,8 +3,8 @@
 
 import { useState, useTransition } from 'react'
 import { Bookmark, EyeOff, Check } from 'lucide-react'
-import { setUserJobState } from '@/app/(app)/actions'
-import type { UserJobState } from '@/lib/user-jobs'
+import { setUserJobFlagAction } from '@/app/(app)/actions'
+import type { UserJobFlags } from '@/lib/user-jobs'
 import { ApplyModal } from './apply-modal'
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
   jobTitle: string
   company: string
   applyUrl: string
-  initialState: UserJobState | null
+  initialFlags: UserJobFlags
 }
 
 export function JobCardActions({
@@ -20,82 +20,89 @@ export function JobCardActions({
   jobTitle,
   company,
   applyUrl,
-  initialState,
+  initialFlags,
 }: Props) {
-  // Optimistic state — we render instantly on click, server action follows.
-  const [state, setState] = useState<UserJobState | null>(initialState)
+  const [flags, setFlags] = useState<UserJobFlags>(initialFlags)
   const [modalOpen, setModalOpen] = useState(false)
   const [, startTransition] = useTransition()
 
-  const toggleSave = (e: React.MouseEvent) => {
+  const toggleSaved = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const next: UserJobState | null = state === 'saved' ? null : 'saved'
-    setState(next)
+    const next = !flags.saved
+    const prev = flags
+    setFlags({ ...flags, saved: next })
     startTransition(async () => {
-      const result = await setUserJobState(jobId, next)
-      if (!result.ok) setState(state) // rollback on error
+      const result = await setUserJobFlagAction(jobId, 'saved', next)
+      if (!result.ok) setFlags(prev)
     })
   }
 
   const hide = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setState('hidden')
+    const prev = flags
+    setFlags({ ...flags, hidden: true })
     startTransition(async () => {
-      const result = await setUserJobState(jobId, 'hidden')
-      if (!result.ok) setState(state)
+      const result = await setUserJobFlagAction(jobId, 'hidden', true)
+      if (!result.ok) setFlags(prev)
     })
   }
 
-  // If already applied, show a static badge instead of action buttons.
-  if (state === 'applied') {
-    return (
-      <div className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
-        <Check className="h-3.5 w-3.5" />
-        Applied
-      </div>
-    )
+  const openApplyModal = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setModalOpen(true)
+  }
+
+  // After user confirms in modal — modal calls back to update applied flag
+  const onApplied = () => {
+    setFlags({ ...flags, applied: true })
   }
 
   return (
     <>
       <div className="flex flex-shrink-0 items-center gap-1.5">
+        {/* Save icon — independent of applied state */}
         <button
           type="button"
-          onClick={toggleSave}
-          aria-label={state === 'saved' ? 'Unsave job' : 'Save job'}
-          aria-pressed={state === 'saved'}
+          onClick={toggleSaved}
+          aria-label={flags.saved ? 'Unsave job' : 'Save job'}
+          aria-pressed={flags.saved}
           className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-            state === 'saved'
+            flags.saved
               ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
               : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
           }`}
         >
-          <Bookmark
-            className="h-4 w-4"
-            fill={state === 'saved' ? 'currentColor' : 'none'}
-          />
+          <Bookmark className="h-4 w-4" fill={flags.saved ? 'currentColor' : 'none'} />
         </button>
-        <button
-          type="button"
-          onClick={hide}
-          aria-label="Hide job"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-        >
-          <EyeOff className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setModalOpen(true)
-          }}
-          className="ml-1 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-600"
-        >
-          Apply
-        </button>
+        {/* Hide icon — only show when not applied (applied jobs don't make sense to hide) */}
+        {!flags.applied && (
+          <button
+            type="button"
+            onClick={hide}
+            aria-label="Hide job"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+          >
+            <EyeOff className="h-4 w-4" />
+          </button>
+        )}
+        {/* Applied badge or Apply button */}
+        {flags.applied ? (
+          <div className="ml-1 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">
+            <Check className="h-3.5 w-3.5" />
+            Applied
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={openApplyModal}
+            className="ml-1 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-600"
+          >
+            Apply
+          </button>
+        )}
       </div>
       <ApplyModal
         open={modalOpen}
@@ -104,6 +111,7 @@ export function JobCardActions({
         jobTitle={jobTitle}
         company={company}
         applyUrl={applyUrl}
+        onApplied={onApplied}
       />
     </>
   )
