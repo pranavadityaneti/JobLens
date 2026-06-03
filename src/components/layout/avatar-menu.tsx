@@ -5,6 +5,7 @@ import { LogOut, User } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -22,12 +23,14 @@ export function AvatarMenu({ phone }: { phone: string }) {
         <User className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-xs font-normal text-zinc-500">
-          Signed in as
-        </DropdownMenuLabel>
-        <DropdownMenuLabel className="-mt-1 text-sm font-medium text-zinc-900">
-          {phone}
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-xs font-normal text-zinc-500">
+            Signed in as
+          </DropdownMenuLabel>
+          <DropdownMenuLabel className="-mt-1 text-sm font-medium text-zinc-900">
+            {phone}
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <form action={signOut}>
           <DropdownMenuItem
