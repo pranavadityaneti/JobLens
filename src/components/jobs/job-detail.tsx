@@ -2,6 +2,7 @@
 import { Building2, Briefcase, Clock, MapPin, Wallet, Sparkles } from 'lucide-react'
 import DOMPurify from 'isomorphic-dompurify'
 import type { UserJobFlags } from '@/lib/user-jobs'
+import { extractExperience, extractWorkModel } from '@/lib/job-text'
 import { CompanyLogo } from './company-logo'
 import { JobCardActions } from './job-card-actions'
 
@@ -55,37 +56,6 @@ function formatPostedAt(iso: string): string {
   if (days < 7) return `${days}d ago`
   if (days < 30) return `${Math.floor(days / 7)}w ago`
   return `${Math.floor(days / 30)}mo ago`
-}
-
-/**
- * Best-effort extraction of experience requirement (e.g. "3-5 years") from
- * the job title and description. Returns null if no clear signal.
- */
-function extractExperience(title: string, description: string): string | null {
-  const text = `${title} ${description}`
-  // Match "3-5 years", "3 to 5 years", "5+ years", "minimum 3 years", "5 years exp"
-  const range = text.match(/(\d{1,2})\s*[-–to]+\s*(\d{1,2})\s*(?:\+)?\s*years?/i)
-  if (range) return `${range[1]}–${range[2]} years`
-  const plus = text.match(/(\d{1,2})\s*\+\s*years?/i)
-  if (plus) return `${plus[1]}+ years`
-  const min = text.match(/min(?:imum)?\s*(\d{1,2})\s*years?/i)
-  if (min) return `${min[1]}+ years`
-  const single = text.match(/(\d{1,2})\s*years?\s*(?:of\s*)?(?:experience|exp)/i)
-  if (single) return `${single[1]} years`
-  return null
-}
-
-/**
- * Best-effort detection of work model (Remote / Hybrid / On-site) from the
- * description. Returns null if no clear signal.
- */
-function extractWorkModel(description: string): string | null {
-  const t = description.toLowerCase()
-  if (/\b(fully\s+remote|100%?\s*remote|remote\s*[-–]?\s*anywhere|wfh\s*permanent)\b/.test(t)) return 'Remote'
-  if (/\bhybrid\b/.test(t)) return 'Hybrid'
-  if (/\b(on[\s-]?site|onsite|in[\s-]?office|office[\s-]?based)\b/.test(t)) return 'On-site'
-  if (/\bremote\b/.test(t)) return 'Remote'
-  return null
 }
 
 /**
