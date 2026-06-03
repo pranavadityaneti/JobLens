@@ -91,6 +91,24 @@ const COMPANY_DOMAIN_MAP: Record<string, string> = {
   'workday': 'workday.com',
 }
 
+/**
+ * Light normalize for curated-map lookups: preserve all words, just
+ * lowercase + collapse whitespace + strip punctuation. So curated keys
+ * like "tata consultancy services" actually get matched against
+ * "Tata Consultancy Services" input.
+ */
+function lightNormalize(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Aggressive normalize for the heuristic fallback: strip legal/common
+ * suffixes so "Acme Pvt Ltd" → "acme" → "acme.com".
+ */
 function normalize(name: string): string {
   return name
     .toLowerCase()
@@ -104,14 +122,19 @@ function normalize(name: string): string {
 }
 
 function guessDomain(name: string): string | null {
-  const key = normalize(name)
-  if (!key) return null
-  // Curated override wins
-  if (COMPANY_DOMAIN_MAP[key]) return COMPANY_DOMAIN_MAP[key]
-  // Try the raw curated lookup too (e.g. "TCS" → already in map)
-  const compact = key.replace(/\s+/g, '')
+  // 1) Curated lookup with light normalize (keeps "tata consultancy services")
+  const lightKey = lightNormalize(name)
+  if (lightKey && COMPANY_DOMAIN_MAP[lightKey]) return COMPANY_DOMAIN_MAP[lightKey]
+  // 2) Curated lookup with compact light normalize (handles "tcs" → "tcs")
+  const lightCompact = lightKey.replace(/\s+/g, '')
+  if (lightCompact && COMPANY_DOMAIN_MAP[lightCompact]) return COMPANY_DOMAIN_MAP[lightCompact]
+  // 3) Curated lookup with aggressive normalize (catches "Microsoft Inc" → "microsoft")
+  const aggressiveKey = normalize(name)
+  if (!aggressiveKey) return null
+  if (COMPANY_DOMAIN_MAP[aggressiveKey]) return COMPANY_DOMAIN_MAP[aggressiveKey]
+  const compact = aggressiveKey.replace(/\s+/g, '')
   if (COMPANY_DOMAIN_MAP[compact]) return COMPANY_DOMAIN_MAP[compact]
-  // Heuristic: strip all whitespace, append .com
+  // 4) Heuristic: strip all whitespace, append .com
   return `${compact}.com`
 }
 
