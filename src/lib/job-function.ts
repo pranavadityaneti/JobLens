@@ -2,6 +2,32 @@
 // Title-pattern → sub-role detection. Used as a post-fetch filter (same
 // pattern as work-model / experience extractors).
 
+import { FUNCTION_GROUPS } from './job-filters'
+
+// General catch-all patterns per function. Each fires ONLY when no specific
+// sub-role pattern from the same function has already matched, so titles
+// like "Marketing Manager" / "Software Engineer" / "Sales Manager" — which
+// don't fit any specific sub-role — still get classified into the right
+// function. Title-only matching (no category) keeps semantics consistent
+// with the rest of the classifier and avoids over-matching when the same
+// word appears in a company's product taxonomy.
+const GENERAL_PATTERNS: Record<string, RegExp> = {
+  'Engineering — General': /\b(software|systems?|principal|staff)\s+(engineer|developer|architect)\b/i,
+  'Data & Analytics — General': /\b(data\s+(scientist|analyst|engineer)|analytics\s+(manager|specialist|lead|director))\b/i,
+  'Product — General': /\bproduct\s+(owner|specialist|analyst|coordinator|lead)\b/i,
+  'Design — General': /\bdesigner\b/i,
+  'Sales — General': /\b(sales\s+(manager|director|head|lead|representative|associate|consultant|specialist|professional|advisor|coordinator|trainer|executive|leader)|head\s+of\s+sales|vp\s+(of\s+)?sales|chief\s+revenue\s+officer)\b/i,
+  'Marketing — General': /\b(marketing|brand)\b/i,
+  'Customer Success / Support — General': /\b(customer|client)\s+(success|support|service|advocate)\b/i,
+  'Operations — General': /\b(operations|ops)\s+(manager|lead|director|specialist|coordinator|analyst|associate|head|chief|officer)\b/i,
+  'HR / People — General': /\b(hr|human\s+resources|people)\s+(manager|specialist|director|associate|generalist|chief|head|coordinator|officer|partner)\b/i,
+  'Finance & Accounting — General': /\b(finance|financial|accounting)\s+(manager|director|head|controller|specialist|analyst|associate|lead|chief|officer)\b/i,
+  'Legal & Compliance — General': /\b(legal|paralegal|compliance|counsel)\b/i,
+  'Security — General': /\b(security|cybersecurity)\s+(manager|director|specialist|engineer|architect|consultant|lead|analyst|officer)\b/i,
+  'IT — General': /\b(it|information\s+technology)\s+(manager|director|specialist|administrator|consultant|professional|associate|officer|lead)\b/i,
+  'Consulting & Advisory — General': /\bconsultant\b/i,
+}
+
 const PATTERNS: Array<[string, RegExp[]]> = [
   ['Backend Engineering', [/\bback[\s-]?end\b.*\b(engineer|developer|dev|swe)\b/i, /\bbackend\s+(engineer|developer)\b/i]],
   ['Frontend Engineering', [/\bfront[\s-]?end\b.*\b(engineer|developer|dev)\b/i, /\b(react|vue|angular)\s+(engineer|developer)\b/i]],
@@ -135,17 +161,42 @@ const PATTERNS: Array<[string, RegExp[]]> = [
   ['Healthcare — Regulatory Affairs', [/\bregulatory\s+affairs/i]],
 ]
 
+// Build sub-role → parent function label map once (used by General fallback).
+const SUB_ROLE_TO_FUNCTION = new Map<string, string>()
+for (const grp of FUNCTION_GROUPS) {
+  for (const sr of grp.subRoles) SUB_ROLE_TO_FUNCTION.set(sr, grp.label)
+}
+
 /**
- * Best-effort sub-role classification driven by title keywords. A title can
- * match multiple sub-roles (e.g. "Senior Full-stack Engineer" → Full-stack
- * Engineering, plus possibly Engineering Management for "Senior") — we
- * return all matches so the filter is generous on the OR side.
+ * Best-effort sub-role classification driven by title keywords.
+ *
+ * Two-pass classifier:
+ *   1) Specific patterns — a title can match multiple specific sub-roles
+ *      (e.g. "Senior Full-stack ML Engineer" → Full-stack + ML).
+ *   2) For each function whose specific patterns did NOT claim this title,
+ *      try the function's "— General" pattern. This catches generic titles
+ *      like "Marketing Manager" / "Software Engineer" / "Sales Manager".
  */
 export function classifySubRoles(title: string, _category: string | null): string[] {
   const matches: string[] = []
+  const claimedFunctions = new Set<string>()
+
+  // Pass 1: specific patterns
   for (const [sub, regs] of PATTERNS) {
-    if (regs.some((r) => r.test(title))) matches.push(sub)
+    if (regs.some((r) => r.test(title))) {
+      matches.push(sub)
+      const fn = SUB_ROLE_TO_FUNCTION.get(sub)
+      if (fn) claimedFunctions.add(fn)
+    }
   }
+
+  // Pass 2: General catch-all for unclaimed functions
+  for (const [generalSub, pattern] of Object.entries(GENERAL_PATTERNS)) {
+    const fn = SUB_ROLE_TO_FUNCTION.get(generalSub)
+    if (!fn || claimedFunctions.has(fn)) continue
+    if (pattern.test(title)) matches.push(generalSub)
+  }
+
   return matches
 }
 

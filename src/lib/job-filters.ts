@@ -94,6 +94,13 @@ export const CONTRACT_TYPE_OPTIONS: readonly string[] = Object.keys(CONTRACT_TYP
 // Note: this was previously named INDUSTRY_GROUPS, but the buckets were
 // actually job functions (Engineering, Product, …) — a true Industry filter
 // (Fintech / EdTech / …) lands in a later batch.
+// Each function ends with a "— General" sub-role that catches generic titles
+// like "Marketing Manager", "Software Engineer", "Sales Manager" which don't
+// match any specific sub-role pattern. The General sub-role fires ONLY when
+// no specific sub-role in the same function has already claimed the job
+// (see `classifySubRoles` in job-function.ts). That way a "Content Marketing
+// Manager" lands in "Content Marketing" without also bleeding into the
+// General bucket — and a plain "Marketing Manager" still gets caught.
 export const FUNCTION_GROUPS: Array<{ label: string; subRoles: string[] }> = [
   { label: 'Engineering', subRoles: [
     'Backend Engineering', 'Frontend Engineering', 'Full-stack Engineering',
@@ -101,57 +108,71 @@ export const FUNCTION_GROUPS: Array<{ label: string; subRoles: string[] }> = [
     'DevOps / SRE', 'Platform Engineering', 'Infrastructure Engineering', 'Cloud Engineering',
     'Data Engineering', 'QA / Test Engineering', 'Embedded / Firmware', 'Hardware Engineering',
     'ML Engineering', 'Security Engineering', 'Engineering Management', 'Solutions / Sales Engineering',
+    'Engineering — General',
   ]},
   { label: 'Data & Analytics', subRoles: [
     'Data Science', 'Data Analytics / BI', 'ML / AI Research', 'Quantitative Research', 'Analytics Engineering',
+    'Data & Analytics — General',
   ]},
   { label: 'Product', subRoles: [
     'Product Management', 'Technical Product Management', 'Product Operations',
     'Product Marketing (PMM)', 'Growth Product',
+    'Product — General',
   ]},
   { label: 'Design', subRoles: [
     'Product Design', 'UX Design', 'UI Design', 'Visual Design', 'Graphic Design',
     'Brand Design', 'Motion / Interaction Design', 'UX Research', 'Service Design', 'Industrial Design',
+    'Design — General',
   ]},
   { label: 'Sales', subRoles: [
     'Account Executive', 'Business Development', 'Sales Development Rep (SDR)',
     'Account Management', 'Solutions / Pre-sales', 'Field Sales', 'Inside Sales',
     'Channel / Partner Sales', 'Sales Operations',
+    'Sales — General',
   ]},
   { label: 'Marketing', subRoles: [
     'Performance / Growth Marketing', 'Content Marketing', 'Brand Marketing',
     'SEO / SEM', 'Social Media', 'PR & Communications', 'Marketing Operations',
     'Lifecycle / CRM Marketing', 'Influencer Marketing', 'Event Marketing',
+    'Marketing — General',
   ]},
   { label: 'Customer Success / Support', subRoles: [
     'Customer Success Management', 'Customer Support', 'Implementation / Onboarding',
     'Technical Account Management', 'Customer Experience',
+    'Customer Success / Support — General',
   ]},
   { label: 'Operations', subRoles: [
     'Business Operations', 'Strategy & Operations', 'Supply Chain', 'Logistics',
     'Program Management', 'Project Management', 'Vendor Management', 'Office Operations',
+    'Operations — General',
   ]},
   { label: 'HR / People', subRoles: [
     'Talent Acquisition (Tech)', 'Talent Acquisition (Non-tech)', 'HR Business Partner',
     'Compensation & Benefits', 'Learning & Development', 'People Operations', 'DEI', 'Employer Branding',
+    'HR / People — General',
   ]},
   { label: 'Finance & Accounting', subRoles: [
     'FP&A', 'Accounting', 'Controller / Bookkeeping', 'Treasury',
     'Internal Audit', 'Investor Relations', 'Tax', 'Procurement',
+    'Finance & Accounting — General',
   ]},
   { label: 'Legal & Compliance', subRoles: [
     'Corporate Legal', 'IP / Patent Law', 'Privacy / Data Protection',
     'Regulatory Compliance', 'Contract Management',
+    'Legal & Compliance — General',
   ]},
   { label: 'Security', subRoles: [
     'Information Security', 'Application Security (AppSec)', 'Security Operations (SOC)',
     'Penetration Testing', 'GRC',
+    'Security — General',
   ]},
   { label: 'IT', subRoles: [
     'IT Operations', 'IT Support / Helpdesk', 'Systems Administration', 'Network Engineering',
+    'IT — General',
   ]},
   { label: 'Consulting & Advisory', subRoles: [
     'Management Consulting', 'Strategy Consulting', 'Industry Consulting',
+    'Consulting & Advisory — General',
   ]},
   { label: 'Other / Specialized', subRoles: [
     'Editorial / Content', 'Recruitment Consultant',
