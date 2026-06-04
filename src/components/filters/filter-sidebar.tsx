@@ -13,6 +13,7 @@ import {
   DATE_OPTIONS,
   EXPERIENCE_OPTIONS,
   FUNCTION_GROUPS,
+  INDUSTRY_OPTIONS,
   LOCATION_OPTIONS,
   SALARY_SLIDER_MAX,
   SALARY_SLIDER_MIN,
@@ -37,6 +38,7 @@ const SECTION_VALUES = [
   'location',
   'date',
   'salary',
+  'industry',
   'function',
   'contract',
   'workmodel',
@@ -137,6 +139,7 @@ export function FilterSidebar({
     !!filters.q ||
     filters.locations.length > 0 ||
     filters.subRoles.length > 0 ||
+    filters.industries.length > 0 ||
     filters.contractTypes.length > 0 ||
     filters.workModels.length > 0 ||
     filters.experience.length > 0 ||
@@ -150,6 +153,7 @@ export function FilterSidebar({
       q: '',
       locations: [],
       subRoles: [],
+      industries: [],
       contractTypes: [],
       workModels: [],
       experience: [],
@@ -332,7 +336,37 @@ export function FilterSidebar({
             </AccordionContent>
           </AccordionItem>
 
-          {/* 5. Function (hierarchical: 15 parent groups × ~100 sub-roles) */}
+          {/* 5. Industry (flat multi-select — company's sector, e.g. Fintech) */}
+          <AccordionItem value="industry">
+            <AccordionTrigger>Industry</AccordionTrigger>
+            <AccordionContent>
+              <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                {INDUSTRY_OPTIONS.map((ind) => {
+                  const checked = filters.industries.includes(ind)
+                  return (
+                    <label
+                      key={ind}
+                      className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(next) =>
+                          onPatch({
+                            industries: next
+                              ? [...filters.industries, ind]
+                              : filters.industries.filter((x) => x !== ind),
+                          })
+                        }
+                      />
+                      <span className="truncate">{ind}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 6. Function (hierarchical: 15 parent groups × ~100 sub-roles) */}
           <AccordionItem value="function">
             <AccordionTrigger>Function</AccordionTrigger>
             <AccordionContent>

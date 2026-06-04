@@ -12,6 +12,7 @@ export type FilterState = {
   q: string
   locations: string[]
   subRoles: string[]
+  industries: string[]
   contractTypes: string[]
   workModels: WorkModel[]
   experience: ExperienceBucket[]
@@ -32,6 +33,7 @@ export const DEFAULT_FILTERS: FilterState = {
   q: '',
   locations: [],
   subRoles: [],
+  industries: [],
   contractTypes: [],
   workModels: [],
   experience: [],
@@ -157,6 +159,34 @@ export const FUNCTION_GROUPS: Array<{ label: string; subRoles: string[] }> = [
   ]},
 ]
 
+// Flat list of 20 industries representing the company's sector (Fintech,
+// EdTech, …). Distinct from FUNCTION_GROUPS, which describes the role's
+// department. Classification lives in `@/lib/job-industry` and runs post-fetch
+// off the job's `company` field.
+export const INDUSTRY_OPTIONS: string[] = [
+  'Software & SaaS',
+  'Internet / Consumer Apps',
+  'AI / ML',
+  'Cybersecurity',
+  'Hardware / Semiconductors',
+  'Banking & Fintech',
+  'Insurance & InsurTech',
+  'Investments / Asset Management',
+  'Pharma & Biotech',
+  'Medical Devices',
+  'Healthcare Services / HealthTech',
+  'E-commerce & Retail',
+  'Education & EdTech',
+  'Media, Entertainment & Gaming',
+  'Real Estate & PropTech',
+  'Manufacturing & Industrial',
+  'Energy, Utilities & CleanTech',
+  'Logistics & Mobility',
+  'Travel, Hospitality & Food',
+  'Consulting & Professional Services',
+  'Other',
+]
+
 export const WORK_MODEL_OPTIONS: readonly WorkModel[] = ['Remote', 'Hybrid', 'On-site']
 
 export const EXPERIENCE_OPTIONS: readonly ExperienceBucket[] = ['Junior', 'Mid', 'Senior', 'Lead']
@@ -220,6 +250,7 @@ export function parseFilters(sp: URLSearchParams): FilterState {
     q: sp.get('q') ?? '',
     locations: arr('loc'),
     subRoles: arr('fn'),
+    industries: arr('ind'),
     contractTypes: arr('ctype'),
     workModels,
     experience,
@@ -241,6 +272,7 @@ export function serializeFilters(f: FilterState): URLSearchParams {
   if (f.q) sp.set('q', f.q)
   f.locations.forEach((v) => sp.append('loc', v))
   f.subRoles.forEach((v) => sp.append('fn', v))
+  f.industries.forEach((v) => sp.append('ind', v))
   f.contractTypes.forEach((v) => sp.append('ctype', v))
   f.workModels.forEach((v) => sp.append('wm', v))
   f.experience.forEach((v) => sp.append('exp', v))
@@ -262,6 +294,7 @@ export function isFilterEmpty(f: FilterState): boolean {
     !f.q &&
     f.locations.length === 0 &&
     f.subRoles.length === 0 &&
+    f.industries.length === 0 &&
     f.contractTypes.length === 0 &&
     f.workModels.length === 0 &&
     f.experience.length === 0 &&

@@ -21,6 +21,7 @@ import {
   extractWorkModel,
 } from '@/lib/job-text'
 import { jobMatchesSubRoleFilter } from '@/lib/job-function'
+import { jobMatchesIndustryFilter } from '@/lib/job-industry'
 
 export default async function JobsPage({
   searchParams,
@@ -102,11 +103,14 @@ export default async function JobsPage({
   }
   const s = sortMap[filters.sort]
 
-  // Sub-role filtering happens post-fetch on the title via heuristics. Pull
-  // 3× the requested limit so we still have enough rows after the post-pass
-  // narrows the set. Trimmed back to `baseLimit` below.
+  // Sub-role and industry filtering happen post-fetch via heuristics. Pull
+  // 3× the requested limit when either is active so we still have enough
+  // rows after the post-pass narrows the set. Trimmed back to `baseLimit`
+  // below.
   const baseLimit = filters.perPage
-  const fetchLimit = filters.subRoles.length > 0 ? baseLimit * 3 : baseLimit
+  const hasPostFetchNarrowing =
+    filters.subRoles.length > 0 || filters.industries.length > 0
+  const fetchLimit = hasPostFetchNarrowing ? baseLimit * 3 : baseLimit
   query = query
     .order(s.col, { ascending: s.asc, nullsFirst: false })
     .limit(fetchLimit)
@@ -130,6 +134,12 @@ export default async function JobsPage({
   if (filters.subRoles.length > 0) {
     const selected = new Set(filters.subRoles)
     jobs = jobs.filter((j) => jobMatchesSubRoleFilter(j.title, j.category, selected))
+  }
+  if (filters.industries.length > 0) {
+    const selectedIndustries = new Set(filters.industries)
+    jobs = jobs.filter((j) => jobMatchesIndustryFilter(j.company, selectedIndustries))
+  }
+  if (hasPostFetchNarrowing) {
     // Trim the over-fetched buffer back down to the requested page size.
     jobs = jobs.slice(0, baseLimit)
   }
