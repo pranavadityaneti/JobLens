@@ -11,7 +11,7 @@ export type SortKey = 'newest' | 'salary_desc' | 'salary_asc'
 export type FilterState = {
   q: string
   locations: string[]
-  industries: string[]
+  subRoles: string[]
   contractTypes: string[]
   workModels: WorkModel[]
   experience: ExperienceBucket[]
@@ -31,7 +31,7 @@ export const SALARY_SLIDER_STEP = 50_000
 export const DEFAULT_FILTERS: FilterState = {
   q: '',
   locations: [],
-  industries: [],
+  subRoles: [],
   contractTypes: [],
   workModels: [],
   experience: [],
@@ -85,68 +85,77 @@ export const CONTRACT_TYPE_GROUPS: Record<string, string[]> = {
 
 export const CONTRACT_TYPE_OPTIONS: readonly string[] = Object.keys(CONTRACT_TYPE_GROUPS)
 
-// Canonical industry taxonomy. Raw DB `category` strings are messy
-// (company-internal codes like "SW Eng - Applications-674") so we map them
-// to a stable set of buckets users can reason about.
-export const INDUSTRY_GROUPS: Record<string, string[]> = {
-  'Engineering': [
-    'Engineering', 'Software Engineering', 'Platforms Engineering',
-    'Platform Engineering', 'Sec Engineering', 'Solution Engineering',
-    'Engineering Jobs', 'Backend Engineering', 'Frontend Engineering',
-    'DevOps', 'Infrastructure', 'Site Reliability',
-  ],
-  'Product': ['Product', 'Product Management', 'PM'],
-  'Design': ['Design', 'Product Design', 'UX', 'UI', 'Visual Design'],
-  'Data & Analytics': [
-    'Data', 'Data Engineering', 'Data Science', 'Analytics',
-    'Machine Learning', 'ML', 'AI',
-  ],
-  'Sales': [
-    'Sales', 'Sales Jobs', 'Field Sales', 'Sales Development',
-    'GTM Tech', 'Go To Market', 'Account Executive',
-    'EMEA - Commercial', 'EMEA - Enterprise', 'Commercial',
-  ],
-  'Marketing': [
-    'Marketing', 'PR, Advertising & Marketing Jobs',
-    'PR Advertising & Marketing Jobs', 'Growth', 'Brand', 'PMM',
-  ],
-  'Customer Success / Support': [
-    'Customer Success', 'Customer Support', 'CS', 'Customer Experience',
-  ],
-  'Operations': ['Operations', 'Ops', 'Business Operations'],
-  'HR & People': [
-    'HR', 'People', 'Recruiting', 'HR & Recruitment Jobs', 'Talent',
-    'People Operations',
-  ],
-  'Finance & Accounting': [
-    'Finance', 'Accounting', 'Accounting & Finance Jobs', 'FP&A',
-  ],
-  'Legal': ['Legal', 'Compliance'],
-  'Security': ['Security', 'Information Security', 'InfoSec'],
-  'IT': ['IT Jobs', 'IT Operations', 'IT Support'],
-  'Healthcare': ['Healthcare', 'Healthcare & Nursing Jobs', 'Medical'],
-}
-
-export const INDUSTRY_OPTIONS: readonly string[] = [...Object.keys(INDUSTRY_GROUPS), 'Other']
-
-/**
- * Map a raw `category` string to its canonical industry bucket.
- * Returns 'Other' when nothing matches. Exact match wins over fuzzy contains
- * so "Engineering" lands in the Engineering bucket cleanly while messy
- * strings like "SW Eng - Applications-674" still get caught by the contains
- * pass.
- */
-export function canonicalIndustry(raw: string | null): string {
-  if (!raw) return 'Other'
-  const rawLower = raw.toLowerCase()
-  for (const [label, raws] of Object.entries(INDUSTRY_GROUPS)) {
-    if (raws.some((v) => v.toLowerCase() === rawLower)) return label
-  }
-  for (const [label, raws] of Object.entries(INDUSTRY_GROUPS)) {
-    if (raws.some((v) => rawLower.includes(v.toLowerCase()))) return label
-  }
-  return 'Other'
-}
+// Hierarchical Function taxonomy: 15 parent functions × ~100 sub-roles.
+// Sub-roles are classified per-job by title keywords in `@/lib/job-function`,
+// so the filter is applied post-fetch (no DB query expansion).
+//
+// Note: this was previously named INDUSTRY_GROUPS, but the buckets were
+// actually job functions (Engineering, Product, …) — a true Industry filter
+// (Fintech / EdTech / …) lands in a later batch.
+export const FUNCTION_GROUPS: Array<{ label: string; subRoles: string[] }> = [
+  { label: 'Engineering', subRoles: [
+    'Backend Engineering', 'Frontend Engineering', 'Full-stack Engineering',
+    'Mobile Engineering (iOS)', 'Mobile Engineering (Android)', 'Mobile Engineering (Cross-platform)',
+    'DevOps / SRE', 'Platform Engineering', 'Infrastructure Engineering', 'Cloud Engineering',
+    'Data Engineering', 'QA / Test Engineering', 'Embedded / Firmware', 'Hardware Engineering',
+    'ML Engineering', 'Security Engineering', 'Engineering Management', 'Solutions / Sales Engineering',
+  ]},
+  { label: 'Data & Analytics', subRoles: [
+    'Data Science', 'Data Analytics / BI', 'ML / AI Research', 'Quantitative Research', 'Analytics Engineering',
+  ]},
+  { label: 'Product', subRoles: [
+    'Product Management', 'Technical Product Management', 'Product Operations',
+    'Product Marketing (PMM)', 'Growth Product',
+  ]},
+  { label: 'Design', subRoles: [
+    'Product Design', 'UX Design', 'UI Design', 'Visual Design', 'Graphic Design',
+    'Brand Design', 'Motion / Interaction Design', 'UX Research', 'Service Design', 'Industrial Design',
+  ]},
+  { label: 'Sales', subRoles: [
+    'Account Executive', 'Business Development', 'Sales Development Rep (SDR)',
+    'Account Management', 'Solutions / Pre-sales', 'Field Sales', 'Inside Sales',
+    'Channel / Partner Sales', 'Sales Operations',
+  ]},
+  { label: 'Marketing', subRoles: [
+    'Performance / Growth Marketing', 'Content Marketing', 'Brand Marketing',
+    'SEO / SEM', 'Social Media', 'PR & Communications', 'Marketing Operations',
+    'Lifecycle / CRM Marketing', 'Influencer Marketing', 'Event Marketing',
+  ]},
+  { label: 'Customer Success / Support', subRoles: [
+    'Customer Success Management', 'Customer Support', 'Implementation / Onboarding',
+    'Technical Account Management', 'Customer Experience',
+  ]},
+  { label: 'Operations', subRoles: [
+    'Business Operations', 'Strategy & Operations', 'Supply Chain', 'Logistics',
+    'Program Management', 'Project Management', 'Vendor Management', 'Office Operations',
+  ]},
+  { label: 'HR / People', subRoles: [
+    'Talent Acquisition (Tech)', 'Talent Acquisition (Non-tech)', 'HR Business Partner',
+    'Compensation & Benefits', 'Learning & Development', 'People Operations', 'DEI', 'Employer Branding',
+  ]},
+  { label: 'Finance & Accounting', subRoles: [
+    'FP&A', 'Accounting', 'Controller / Bookkeeping', 'Treasury',
+    'Internal Audit', 'Investor Relations', 'Tax', 'Procurement',
+  ]},
+  { label: 'Legal & Compliance', subRoles: [
+    'Corporate Legal', 'IP / Patent Law', 'Privacy / Data Protection',
+    'Regulatory Compliance', 'Contract Management',
+  ]},
+  { label: 'Security', subRoles: [
+    'Information Security', 'Application Security (AppSec)', 'Security Operations (SOC)',
+    'Penetration Testing', 'GRC',
+  ]},
+  { label: 'IT', subRoles: [
+    'IT Operations', 'IT Support / Helpdesk', 'Systems Administration', 'Network Engineering',
+  ]},
+  { label: 'Consulting & Advisory', subRoles: [
+    'Management Consulting', 'Strategy Consulting', 'Industry Consulting',
+  ]},
+  { label: 'Other / Specialized', subRoles: [
+    'Editorial / Content', 'Recruitment Consultant',
+    'Healthcare — Clinical', 'Healthcare — Regulatory Affairs', 'Other',
+  ]},
+]
 
 export const WORK_MODEL_OPTIONS: readonly WorkModel[] = ['Remote', 'Hybrid', 'On-site']
 
@@ -210,7 +219,7 @@ export function parseFilters(sp: URLSearchParams): FilterState {
   return {
     q: sp.get('q') ?? '',
     locations: arr('loc'),
-    industries: arr('ind'),
+    subRoles: arr('fn'),
     contractTypes: arr('ctype'),
     workModels,
     experience,
@@ -231,7 +240,7 @@ export function serializeFilters(f: FilterState): URLSearchParams {
   const sp = new URLSearchParams()
   if (f.q) sp.set('q', f.q)
   f.locations.forEach((v) => sp.append('loc', v))
-  f.industries.forEach((v) => sp.append('ind', v))
+  f.subRoles.forEach((v) => sp.append('fn', v))
   f.contractTypes.forEach((v) => sp.append('ctype', v))
   f.workModels.forEach((v) => sp.append('wm', v))
   f.experience.forEach((v) => sp.append('exp', v))
@@ -252,7 +261,7 @@ export function isFilterEmpty(f: FilterState): boolean {
   return (
     !f.q &&
     f.locations.length === 0 &&
-    f.industries.length === 0 &&
+    f.subRoles.length === 0 &&
     f.contractTypes.length === 0 &&
     f.workModels.length === 0 &&
     f.experience.length === 0 &&
