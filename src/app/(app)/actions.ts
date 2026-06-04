@@ -10,11 +10,18 @@ import { fetchLeverJobs } from '@/lib/sources/lever'
 import { fetchAshbyJobs } from '@/lib/sources/ashby'
 import { fetchNaukriJobs } from '@/lib/sources/apify-naukri'
 import { fetchLinkedinJobs } from '@/lib/sources/apify-linkedin'
+import { fetchWorkdayJobs } from '@/lib/sources/workday'
+import { fetchSmartRecruitersJobs } from '@/lib/sources/smartrecruiters'
+import { fetchBambooHRJobs } from '@/lib/sources/bamboohr'
+import { fetchWorkableJobs } from '@/lib/sources/workable'
 import {
   GREENHOUSE_BOARDS,
   LEVER_SLUGS,
   ASHBY_SLUGS,
   APIFY_SEARCH_QUERIES,
+  WORKDAY_TENANTS,
+  SMARTRECRUITERS_SLUGS,
+  BAMBOOHR_SUBDOMAINS,
 } from '@/lib/sources/companies'
 import type { ParsedJob } from '@/lib/sources/types'
 import { upsertJobs } from '@/lib/jobs'
@@ -93,13 +100,15 @@ export async function ingestAllSources(): Promise<IngestAllResult> {
 
   // ATS sources — fan out across companies in parallel WITHIN each ATS,
   // sequential ACROSS ATSes to keep the load polite.
-  const atsSources = [
-    ['greenhouse', GREENHOUSE_BOARDS, fetchGreenhouseJobs],
-    ['lever', LEVER_SLUGS, fetchLeverJobs],
-    ['ashby', ASHBY_SLUGS, fetchAshbyJobs],
-  ] as const
-
-  for (const [name, tokens, fetcher] of atsSources) {
+  // Tokens vary per ATS: string slugs for Greenhouse/Lever/Ashby/SmartRecruiters/
+  // BambooHR; structured { tenant, site, wdHost } objects for Workday.
+  // Workable doesn't fit this fan-out pattern (no per-account API) — it runs
+  // separately below as a single firehose query.
+  async function runAts<T>(
+    name: string,
+    tokens: readonly T[],
+    fetcher: (t: T) => Promise<{ jobs: ParsedJob[]; errors: string[] }>,
+  ) {
     let inserted = 0
     let skipped = 0
     const errors: string[] = []
@@ -118,6 +127,35 @@ export async function ingestAllSources(): Promise<IngestAllResult> {
     bySource[name] = { inserted, skipped, errors }
     totalInserted += inserted
     totalSkipped += skipped
+  }
+
+  await runAts('greenhouse', GREENHOUSE_BOARDS, fetchGreenhouseJobs)
+  await runAts('lever', LEVER_SLUGS, fetchLeverJobs)
+  await runAts('ashby', ASHBY_SLUGS, fetchAshbyJobs)
+  await runAts('workday', WORKDAY_TENANTS, fetchWorkdayJobs)
+  await runAts('smartrecruiters', SMARTRECRUITERS_SLUGS, fetchSmartRecruitersJobs)
+  await runAts('bamboohr', BAMBOOHR_SUBDOMAINS, fetchBambooHRJobs)
+
+  // Workable — single firehose query (see note above). Sequenced after the
+  // ATS fan-out to keep timing predictable.
+  try {
+    const r = await fetchWorkableJobs({ location: 'India', limit: 100 })
+    let inserted = 0
+    let skipped = 0
+    if (r.jobs.length > 0) {
+      const u = await upsertJobs(r.jobs)
+      inserted = u.inserted
+      skipped = u.skipped
+    }
+    bySource.workable = { inserted, skipped, errors: r.errors }
+    totalInserted += inserted
+    totalSkipped += skipped
+  } catch (err) {
+    bySource.workable = {
+      inserted: 0,
+      skipped: 0,
+      errors: [err instanceof Error ? err.message : String(err)],
+    }
   }
 
   // Apify sources — Naukri + LinkedIn. Each runs every curated search query
