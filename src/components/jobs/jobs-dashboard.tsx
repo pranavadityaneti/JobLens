@@ -30,7 +30,6 @@ type Props = {
   filters: FilterState
   jobs: DashboardJob[]
   flagsRecord: Record<string, UserJobFlags>
-  industryOptions: readonly string[]
   error: string | null
 }
 
@@ -51,7 +50,6 @@ export function JobsDashboard({
   filters,
   jobs,
   flagsRecord,
-  industryOptions,
   error,
 }: Props) {
   const router = useRouter()
@@ -129,7 +127,6 @@ export function JobsDashboard({
   const sidebar = (
     <FilterSidebar
       filters={filters}
-      industryOptions={industryOptions}
       side={side}
       onSideToggle={toggleSide}
       onPatch={onPatch}

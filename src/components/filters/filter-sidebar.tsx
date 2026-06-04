@@ -1,8 +1,8 @@
 // src/components/filters/filter-sidebar.tsx
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeftRight, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowLeftRight, ChevronRight, X } from 'lucide-react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,6 +12,7 @@ import {
   CONTRACT_TYPE_OPTIONS,
   DATE_OPTIONS,
   EXPERIENCE_OPTIONS,
+  FUNCTION_GROUPS,
   LOCATION_OPTIONS,
   SALARY_SLIDER_MAX,
   SALARY_SLIDER_MIN,
@@ -26,7 +27,6 @@ type SidebarSide = 'left' | 'right'
 
 type Props = {
   filters: FilterState
-  industryOptions: readonly string[]
   side: SidebarSide
   onSideToggle: () => void
   onPatch: (partial: Partial<FilterState>) => void
@@ -37,7 +37,7 @@ const SECTION_VALUES = [
   'location',
   'date',
   'salary',
-  'industry',
+  'function',
   'contract',
   'workmodel',
   'experience',
@@ -58,7 +58,6 @@ function formatSalary(n: number): string {
 
 export function FilterSidebar({
   filters,
-  industryOptions,
   side,
   onSideToggle,
   onPatch,
@@ -137,7 +136,7 @@ export function FilterSidebar({
   const hasAny =
     !!filters.q ||
     filters.locations.length > 0 ||
-    filters.industries.length > 0 ||
+    filters.subRoles.length > 0 ||
     filters.contractTypes.length > 0 ||
     filters.workModels.length > 0 ||
     filters.experience.length > 0 ||
@@ -150,7 +149,7 @@ export function FilterSidebar({
     onPatch({
       q: '',
       locations: [],
-      industries: [],
+      subRoles: [],
       contractTypes: [],
       workModels: [],
       experience: [],
@@ -163,8 +162,37 @@ export function FilterSidebar({
     setSliderLocal([SALARY_SLIDER_MIN, SALARY_SLIDER_MAX])
   }, [onPatch])
 
-  // memoised options to avoid re-renders
-  const industriesList = useMemo(() => industryOptions, [industryOptions])
+  // Function-section local state: which parent groups are expanded. Empty
+  // by default (all collapsed) — too many sub-roles to render everything up
+  // front. Independent of the outer accordion's open/closed state.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const toggleGroup = useCallback((label: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }, [])
+
+  // Toggle ALL sub-roles in a group: if any are selected, clear them; else
+  // add the full set. Mirrors a "parent checkbox" semantic.
+  const toggleParent = useCallback(
+    (groupSubs: string[]) => {
+      const selectedSet = new Set(filters.subRoles)
+      const anySelected = groupSubs.some((s) => selectedSet.has(s))
+      if (anySelected) {
+        // Clear all subs in this group
+        const next = filters.subRoles.filter((s) => !groupSubs.includes(s))
+        onPatch({ subRoles: next })
+      } else {
+        // Add all subs in this group
+        const next = Array.from(new Set([...filters.subRoles, ...groupSubs]))
+        onPatch({ subRoles: next })
+      }
+    },
+    [filters.subRoles, onPatch],
+  )
 
   return (
     <aside className="w-full shrink-0 md:w-72">
@@ -304,37 +332,77 @@ export function FilterSidebar({
             </AccordionContent>
           </AccordionItem>
 
-          {/* 5. Industry */}
-          <AccordionItem value="industry">
-            <AccordionTrigger>Industry</AccordionTrigger>
+          {/* 5. Function (hierarchical: 15 parent groups × ~100 sub-roles) */}
+          <AccordionItem value="function">
+            <AccordionTrigger>Function</AccordionTrigger>
             <AccordionContent>
-              {industriesList.length === 0 ? (
-                <p className="text-xs text-zinc-500">No industries detected yet.</p>
-              ) : (
-                <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
-                  {industriesList.map((ind) => {
-                    const checked = filters.industries.includes(ind)
-                    return (
-                      <label
-                        key={ind}
-                        className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(next) =>
-                            onPatch({
-                              industries: next
-                                ? [...filters.industries, ind]
-                                : filters.industries.filter((x) => x !== ind),
-                            })
-                          }
-                        />
-                        <span className="truncate">{ind}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
+              <div className="flex flex-col gap-1 max-h-72 overflow-y-auto pr-1">
+                {FUNCTION_GROUPS.map((group) => {
+                  const subs = group.subRoles
+                  const selectedSet = new Set(filters.subRoles)
+                  const selectedInGroup = subs.filter((s) => selectedSet.has(s))
+                  const allSelected = selectedInGroup.length === subs.length
+                  const someSelected = selectedInGroup.length > 0 && !allSelected
+                  const expanded = expandedGroups.has(group.label)
+                  return (
+                    <div key={group.label} className="py-0.5">
+                      <div className="flex items-center gap-1.5 text-sm text-zinc-800">
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group.label)}
+                          aria-label={expanded ? `Collapse ${group.label}` : `Expand ${group.label}`}
+                          aria-expanded={expanded}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded text-zinc-500 hover:text-zinc-900"
+                        >
+                          <ChevronRight
+                            className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                          />
+                        </button>
+                        <label className="flex flex-1 cursor-pointer items-center gap-2">
+                          <Checkbox
+                            checked={allSelected}
+                            indeterminate={someSelected}
+                            onCheckedChange={() => toggleParent(subs)}
+                          />
+                          <span className={`truncate ${someSelected || allSelected ? 'font-medium text-zinc-900' : ''}`}>
+                            {group.label}
+                          </span>
+                          {selectedInGroup.length > 0 && (
+                            <span className="ml-auto text-xs text-zinc-500">
+                              {selectedInGroup.length}/{subs.length}
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                      {expanded && (
+                        <div className="ml-7 mt-1 flex flex-col gap-1.5">
+                          {subs.map((sub) => {
+                            const checked = selectedSet.has(sub)
+                            return (
+                              <label
+                                key={sub}
+                                className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(next) =>
+                                    onPatch({
+                                      subRoles: next
+                                        ? [...filters.subRoles, sub]
+                                        : filters.subRoles.filter((x) => x !== sub),
+                                    })
+                                  }
+                                />
+                                <span className="truncate">{sub}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </AccordionContent>
           </AccordionItem>
 

@@ -59,11 +59,11 @@ export function ActiveFilterChips({ filters, onPatch }: Props) {
       clear: () => ({ salaryMin: null, salaryMax: null }),
     })
   }
-  for (const ind of filters.industries) {
+  for (const sub of filters.subRoles) {
     chips.push({
-      key: `ind:${ind}`,
-      label: ind,
-      clear: () => ({ industries: filters.industries.filter((x) => x !== ind) }),
+      key: `fn:${sub}`,
+      label: sub,
+      clear: () => ({ subRoles: filters.subRoles.filter((x) => x !== sub) }),
     })
   }
   for (const c of filters.contractTypes) {
@@ -118,7 +118,7 @@ export function ActiveFilterChips({ filters, onPatch }: Props) {
           onPatch({
             q: '',
             locations: [],
-            industries: [],
+            subRoles: [],
             contractTypes: [],
             workModels: [],
             experience: [],

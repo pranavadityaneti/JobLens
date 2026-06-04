@@ -11,8 +11,6 @@ import {
 } from '@/components/jobs/jobs-dashboard'
 import {
   CONTRACT_TYPE_GROUPS,
-  INDUSTRY_GROUPS,
-  INDUSTRY_OPTIONS,
   LOCATION_GROUPS,
   dateCutoffIso,
   parseFilters,
@@ -22,6 +20,7 @@ import {
   extractExperienceBucket,
   extractWorkModel,
 } from '@/lib/job-text'
+import { jobMatchesSubRoleFilter } from '@/lib/job-function'
 
 export default async function JobsPage({
   searchParams,
@@ -63,17 +62,6 @@ export default async function JobsPage({
     const orStr = patterns.map((p) => `location.ilike.%${p}%`).join(',')
     query = query.or(orStr)
   }
-  if (filters.industries.length) {
-    // Expand each canonical industry into its raw-value list, then ILIKE-OR
-    // so partial matches (e.g. "SW Eng - Applications-674" → Engineering)
-    // are caught. We skip "Other" here in MVP — querying "everything NOT in
-    // any known group" is hard to express cleanly in PostgREST.
-    const expanded = filters.industries.flatMap((i) => INDUSTRY_GROUPS[i] ?? [])
-    if (expanded.length > 0) {
-      const orStr = expanded.map((v) => `category.ilike.%${v}%`).join(',')
-      query = query.or(orStr)
-    }
-  }
   if (filters.contractTypes.length) {
     // Canonical labels map to many raw `contract_type` values; flatten + IN.
     const values = filters.contractTypes.flatMap(
@@ -113,9 +101,15 @@ export default async function JobsPage({
     salary_asc: { col: 'salary_min', asc: true },
   }
   const s = sortMap[filters.sort]
+
+  // Sub-role filtering happens post-fetch on the title via heuristics. Pull
+  // 3× the requested limit so we still have enough rows after the post-pass
+  // narrows the set. Trimmed back to `baseLimit` below.
+  const baseLimit = filters.perPage
+  const fetchLimit = filters.subRoles.length > 0 ? baseLimit * 3 : baseLimit
   query = query
     .order(s.col, { ascending: s.asc, nullsFirst: false })
-    .limit(filters.perPage)
+    .limit(fetchLimit)
 
   const { data, error } = await query
   let jobs = (data ?? []) as DashboardJob[]
@@ -133,21 +127,23 @@ export default async function JobsPage({
       return exp != null && filters.experience.includes(exp)
     })
   }
+  if (filters.subRoles.length > 0) {
+    const selected = new Set(filters.subRoles)
+    jobs = jobs.filter((j) => jobMatchesSubRoleFilter(j.title, j.category, selected))
+    // Trim the over-fetched buffer back down to the requested page size.
+    jobs = jobs.slice(0, baseLimit)
+  }
 
   // Flag map for the cards
   const stateMap = await getUserFlagsForJobs(jobs.map((j) => j.id))
   const flagsRecord: Record<string, UserJobFlags> = {}
   for (const [k, v] of stateMap) flagsRecord[k] = v
 
-  // Industry options are a fixed canonical taxonomy — no dynamic sampling.
-  // See INDUSTRY_GROUPS in @/lib/job-filters for the raw→canonical mapping.
-
   return (
     <JobsDashboard
       filters={filters}
       jobs={jobs}
       flagsRecord={flagsRecord}
-      industryOptions={INDUSTRY_OPTIONS}
       error={error?.message ?? null}
     />
   )
