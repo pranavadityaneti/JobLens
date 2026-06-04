@@ -92,3 +92,27 @@ export const APIFY_SEARCH_QUERIES: { keyword: string; location: string }[] = [
   { keyword: 'engineer', location: 'Bangalore' },
   { keyword: 'engineer', location: 'Mumbai' },
 ]
+
+// ---- Workday tenants ---------------------------------------------------
+// Pattern per company: { tenant, site, wdHost } where wdHost is the wd{N}
+// subdomain Workday assigns (varies per tenant; common values are wd1, wd3,
+// wd5, wd12, wd103). Verified live against the cxs endpoint during
+// integration; entries whose site IDs returned HTTP 422 (e.g. tcs, jpmc,
+// ibm, microsoft, vmware, oracle, ge, deloitte) were dropped.
+export const WORKDAY_TENANTS: Array<{
+  tenant: string
+  site: string
+  wdHost: string
+}> = [
+  { tenant: 'salesforce', site: 'External_Career_Site', wdHost: 'wd12' },
+  { tenant: 'accenture', site: 'AccentureCareers', wdHost: 'wd103' },
+  { tenant: 'pwc', site: 'Global_Experienced_Careers', wdHost: 'wd3' },
+  { tenant: 'nvidia', site: 'NVIDIAExternalCareerSite', wdHost: 'wd5' },
+  { tenant: 'intel', site: 'External', wdHost: 'wd1' },
+  // dropped (422 on cxs jobs endpoint with default body):
+  //   tcs/Tcs_Career, jpmc/External_Career_Site, ibm/External_Career_Site,
+  //   microsoft/External, vmware/VMware_Careers, oracle/Oracle,
+  //   boa/Bank_of_America_Careers, hsbc/HSBC_Holdings_PLC, ey/EYGlobalCareers,
+  //   kpmg/KPMG_Careers, deloitte/US_External_Career_Site, ge/GE_ExternalSite,
+  //   morganstanley/External, amd/External — site IDs not public for those.
+]
