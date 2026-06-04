@@ -28,6 +28,7 @@ export type JobDetailData = {
   contract_type: string | null
   contract_time: string | null
   posted_at: string
+  multi_platform?: boolean
 }
 
 function formatSalary(
@@ -177,9 +178,19 @@ export function JobDetail({
       <header className="flex items-start gap-5 px-2 pb-5">
         <CompanyLogo company={job.company} size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-950">
-            {job.title}
-          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-950">
+              {job.title}
+            </h2>
+            {job.multi_platform && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700"
+                title="Posted on multiple platforms"
+              >
+                Multi-platform
+              </span>
+            )}
+          </div>
           <p className="mt-1 flex items-center gap-1.5 text-base text-zinc-700">
             <Building2 className="h-4 w-4 text-zinc-400" />
             {job.company}

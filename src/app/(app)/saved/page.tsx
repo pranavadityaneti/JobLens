@@ -1,5 +1,6 @@
 // src/app/(app)/saved/page.tsx
 import { getJobsByUserFlag, type UserJobFlags } from '@/lib/user-jobs'
+import { attachMultiPlatformFlag } from '@/lib/jobs'
 import { JobFeed, type FeedJob } from '@/components/jobs/job-feed'
 
 export default async function SavedPage() {
@@ -14,7 +15,8 @@ export default async function SavedPage() {
       hidden: j.hidden_at != null,
     }
   }
-  const feedJobs = jobs as unknown as FeedJob[]
+  const jobsWithMulti = await attachMultiPlatformFlag(jobs)
+  const feedJobs = jobsWithMulti as unknown as FeedJob[]
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">

@@ -30,6 +30,8 @@ export type JobWithFlags = {
   contract_type: string | null
   contract_time: string | null
   posted_at: string
+  dedup_hash: string | null
+  canonical_id: string | null
   saved_at: string | null
   applied_at: string | null
   hidden_at: string | null
@@ -92,7 +94,7 @@ export async function getJobsByUserFlag(flag: UserJobFlag): Promise<JobWithFlags
       jobs (
         id, source, source_id, title, company, location, description, apply_url,
         salary_min, salary_max, salary_currency, category, contract_type,
-        contract_time, posted_at
+        contract_time, posted_at, dedup_hash, canonical_id
       )
     `,
     )

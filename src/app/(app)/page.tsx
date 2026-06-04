@@ -5,6 +5,7 @@ import {
   getUserJobIdsWithAnyFlag,
   type UserJobFlags,
 } from '@/lib/user-jobs'
+import { attachMultiPlatformFlag } from '@/lib/jobs'
 import {
   JobsDashboard,
   type DashboardJob,
@@ -48,8 +49,12 @@ export default async function JobsPage({
   let query = supabase
     .from('jobs')
     .select(
-      'id, source, source_id, title, company, location, description, apply_url, salary_min, salary_max, salary_currency, category, contract_type, contract_time, posted_at',
+      'id, source, source_id, title, company, location, description, apply_url, salary_min, salary_max, salary_currency, category, contract_type, contract_time, posted_at, dedup_hash, canonical_id',
     )
+    // Only show canonical (first-seen) rows in the feed; duplicate rows
+    // from other sources stay in the DB for attribution but are folded
+    // into their canonical and rendered with a "multi-platform" badge.
+    .is('canonical_id', null)
 
   // ----- Server-side filters -----
   if (filters.q) {
@@ -144,15 +149,19 @@ export default async function JobsPage({
     jobs = jobs.slice(0, baseLimit)
   }
 
+  // Mark canonical rows that have at least one duplicate pointing at them
+  // so JobCard can render the "Posted on multiple platforms" badge.
+  const jobsWithMulti = await attachMultiPlatformFlag(jobs)
+
   // Flag map for the cards
-  const stateMap = await getUserFlagsForJobs(jobs.map((j) => j.id))
+  const stateMap = await getUserFlagsForJobs(jobsWithMulti.map((j) => j.id))
   const flagsRecord: Record<string, UserJobFlags> = {}
   for (const [k, v] of stateMap) flagsRecord[k] = v
 
   return (
     <JobsDashboard
       filters={filters}
-      jobs={jobs}
+      jobs={jobsWithMulti}
       flagsRecord={flagsRecord}
       error={error?.message ?? null}
     />
