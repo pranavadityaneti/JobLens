@@ -144,3 +144,15 @@ export const BAMBOOHR_SUBDOMAINS: string[] = [
   //   bamboohr, postman, stitchfix, rover, patreon, crewmeister, zerocater
   // dropped (HTTP 200 but totalCount=0): wistia, asana, splice, kindred, wave
 ]
+
+// ---- Workable -----------------------------------------------------------
+// Note: Workable does NOT expose a working per-account postings endpoint
+// (apply.workable.com/api/v3/accounts/{slug}/jobs returns 0 for almost every
+// account in practice). The actual live public API is the cross-customer
+// firehose at jobs.workable.com/api/v1/jobs?location=India which returns
+// 5k+ India jobs across all Workable customers. So we ingest Workable like
+// Adzuna — one location query, not a fan-out — and this slug list is a no-op
+// placeholder kept for symmetry with the other ATS curated lists. The
+// company name comes from the embedded `job.company.title` in the firehose
+// response.
+export const WORKABLE_SLUGS: string[] = []
