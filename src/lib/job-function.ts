@@ -60,7 +60,16 @@ const PATTERNS: Array<[string, RegExp[]]> = [
   ['Brand Marketing', [/\bbrand\s+(marketing|manager)/i]],
   ['SEO / SEM', [/\b(seo|sem|search\s+(engine|marketing))/i]],
   ['Social Media', [/\b(social\s+media|community\s+manager)/i]],
-  ['PR & Communications', [/\b(pr|public\s+relations|communications\s+manager)/i]],
+  // Closing \b on the group prevents \bpr from matching "Pr" at the start
+  // of "Product", "Press", "Process", "Principal", "Presales", etc. We also
+  // require the comms branch to be followed by a role noun so we don't catch
+  // "Internal Communications Strategy Lead Analyst" through vague mid-title
+  // matches.
+  ['PR & Communications', [
+    /\b(?:pr|public\s+relations)\b/i,
+    /\bcommunications?\s+(manager|specialist|lead|director|head|associate|coordinator)\b/i,
+    /\bcorporate\s+communications\b/i,
+  ]],
   ['Marketing Operations', [/\bmarketing\s+(operations|ops)/i]],
   ['Lifecycle / CRM Marketing', [/\b(lifecycle|crm|email|retention)\s+marketing/i]],
   ['Influencer Marketing', [/\binfluencer/i]],
