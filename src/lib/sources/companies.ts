@@ -116,3 +116,12 @@ export const WORKDAY_TENANTS: Array<{
   //   kpmg/KPMG_Careers, deloitte/US_External_Career_Site, ge/GE_ExternalSite,
   //   morganstanley/External, amd/External — site IDs not public for those.
 ]
+
+// ---- SmartRecruiters company slugs ------------------------------------
+// Slugs are case-sensitive. Verified live (HTTP 200 + non-empty content)
+// during integration. IKEA returned HTTP 200 but totalFound=0 and was dropped.
+export const SMARTRECRUITERS_SLUGS: string[] = [
+  'Visa',
+  'BoschGroup',
+  // dead/empty as of integration: IKEA (totalFound=0)
+]
