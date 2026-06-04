@@ -125,3 +125,22 @@ export const SMARTRECRUITERS_SLUGS: string[] = [
   'BoschGroup',
   // dead/empty as of integration: IKEA (totalFound=0)
 ]
+
+// ---- BambooHR subdomains ----------------------------------------------
+// Pattern: {subdomain}.bamboohr.com. BambooHR's customer base skews US/EU
+// SMB so most boards have zero India jobs. We still ingest from a few
+// verified-live tenants — isIndianRelevant() drops the non-India rows in the
+// client. Cloudflare blocks server-to-server requests on many tenants
+// (bamboohr, postman, stitchfix, rover) — those return HTTP 403 and are
+// dropped here.
+export const BAMBOOHR_SUBDOMAINS: string[] = [
+  'mantra',
+  'intuit',
+  'palantir',
+  'pivotal',
+  'scribd',
+  'rightway',
+  // dropped (HTTP 403 Cloudflare from server-side IPs as of integration):
+  //   bamboohr, postman, stitchfix, rover, patreon, crewmeister, zerocater
+  // dropped (HTTP 200 but totalCount=0): wistia, asana, splice, kindred, wave
+]
