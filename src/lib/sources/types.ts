@@ -2,7 +2,13 @@
 // Shared types across all job sources. Each source maps its native shape
 // into ParsedJob before upsert.
 
-export type JobSource = 'adzuna' | 'greenhouse' | 'lever' | 'ashby'
+export type JobSource =
+  | 'adzuna'
+  | 'greenhouse'
+  | 'lever'
+  | 'ashby'
+  | 'naukri'
+  | 'linkedin'
 
 export type ParsedJob = {
   source: JobSource

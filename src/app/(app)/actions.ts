@@ -8,10 +8,13 @@ import { fetchAdzunaJobs } from '@/lib/sources/adzuna'
 import { fetchGreenhouseJobs } from '@/lib/sources/greenhouse'
 import { fetchLeverJobs } from '@/lib/sources/lever'
 import { fetchAshbyJobs } from '@/lib/sources/ashby'
+import { fetchNaukriJobs } from '@/lib/sources/apify-naukri'
+import { fetchLinkedinJobs } from '@/lib/sources/apify-linkedin'
 import {
   GREENHOUSE_BOARDS,
   LEVER_SLUGS,
   ASHBY_SLUGS,
+  APIFY_SEARCH_QUERIES,
 } from '@/lib/sources/companies'
 import type { ParsedJob } from '@/lib/sources/types'
 import { upsertJobs } from '@/lib/jobs'
@@ -101,6 +104,35 @@ export async function ingestAllSources(): Promise<IngestAllResult> {
     let skipped = 0
     const errors: string[] = []
     const results = await Promise.all(tokens.map((t) => fetcher(t)))
+    const allJobs: ParsedJob[] = results.flatMap((r) => r.jobs)
+    for (const r of results) errors.push(...r.errors)
+    if (allJobs.length > 0) {
+      try {
+        const r = await upsertJobs(allJobs)
+        inserted += r.inserted
+        skipped += r.skipped
+      } catch (err) {
+        errors.push(`upsert: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+    bySource[name] = { inserted, skipped, errors }
+    totalInserted += inserted
+    totalSkipped += skipped
+  }
+
+  // Apify sources — Naukri + LinkedIn. Each runs every curated search query
+  // in parallel; results are deduped by upsert on (source, source_id).
+  // Sequential across sources to keep concurrent Apify spend bounded.
+  const apifySources = [
+    ['naukri', fetchNaukriJobs],
+    ['linkedin', fetchLinkedinJobs],
+  ] as const
+
+  for (const [name, fetcher] of apifySources) {
+    let inserted = 0
+    let skipped = 0
+    const errors: string[] = []
+    const results = await Promise.all(APIFY_SEARCH_QUERIES.map((q) => fetcher(q)))
     const allJobs: ParsedJob[] = results.flatMap((r) => r.jobs)
     for (const r of results) errors.push(...r.errors)
     if (allJobs.length > 0) {

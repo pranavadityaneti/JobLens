@@ -78,3 +78,17 @@ export function isIndianRelevant(location: string): boolean {
   if (REMOTE_PATTERNS.some((p) => p.test(location))) return true
   return false
 }
+
+// Apify search queries — curated keyword × location pairs for Naukri/LinkedIn.
+// Each entry runs once per ingest cycle against both Apify sources. ~8 queries
+// × ~50 jobs/query ≈ 400 jobs per source per cycle.
+export const APIFY_SEARCH_QUERIES: { keyword: string; location: string }[] = [
+  { keyword: 'software engineer', location: 'India' },
+  { keyword: 'product manager', location: 'India' },
+  { keyword: 'data scientist', location: 'India' },
+  { keyword: 'designer', location: 'India' },
+  { keyword: 'marketing', location: 'India' },
+  { keyword: 'sales', location: 'India' },
+  { keyword: 'engineer', location: 'Bangalore' },
+  { keyword: 'engineer', location: 'Mumbai' },
+]
