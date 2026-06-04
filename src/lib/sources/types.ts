@@ -9,6 +9,10 @@ export type JobSource =
   | 'ashby'
   | 'naukri'
   | 'linkedin'
+  | 'workday'
+  | 'smartrecruiters'
+  | 'bamboohr'
+  | 'workable'
 
 export type ParsedJob = {
   source: JobSource
